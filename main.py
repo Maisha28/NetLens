@@ -18,17 +18,30 @@ Stop with Ctrl+C.
 See capture/capture.py's module docstring for the Administrator/Npcap
 requirements this depends on - if capture can't open the interface,
 that same guidance is surfaced below instead of a raw traceback.
+
+To capture a phone's traffic through a Windows mobile hotspot, scapy's
+default interface is often the wrong one - the hotspot's clients show up
+on a separate virtual adapter (typically named "Local Area Connection*
+N", description "Microsoft Wi-Fi Direct Virtual Adapter"). Run with
+--list-interfaces to see every adapter Npcap can see, then pass the
+right one with --iface "<name>".
+
+Run:
+    python main.py --list-interfaces
+    python main.py --iface "Local Area Connection* 3"
+Stop with Ctrl+C.
 """
 
 from __future__ import annotations
 
+import argparse
 import time
 
 from rich.console import Console
 
 from capture.capture import capture_packets
 from decoder.decoder import decode
-from storage.db import DEFAULT_DB_PATH, get_all_packets, get_connection, store_packet
+from storage.db import DEFAULT_DB_PATH, get_all_packets, get_connection, store_flows, store_packet
 from storage.display import print_flow_table, print_packet_row
 from storage.flow_tracker import group_into_flows
 
@@ -38,9 +51,39 @@ FLOW_TABLE_EVERY_N_PACKETS = 50
 FLOW_TABLE_EVERY_N_SECONDS = 10
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="NetLens - live packet capture, decode, and flow view.")
+    parser.add_argument(
+        "--iface",
+        default=None,
+        help='Interface name to capture on, e.g. "Local Area Connection* 3" '
+        "(the hotspot's virtual adapter). Defaults to scapy's active interface.",
+    )
+    parser.add_argument(
+        "--list-interfaces",
+        action="store_true",
+        help="List available capture interfaces (name, description, GUID) and exit.",
+    )
+    return parser.parse_args()
+
+
+def _list_interfaces() -> None:
+    from scapy.arch import get_windows_if_list
+
+    for iface in get_windows_if_list():
+        console.print(f"[bold]{iface.get('name')}[/bold]  -  {iface.get('description')}")
+
+
 def main() -> None:
+    args = _parse_args()
+    if args.list_interfaces:
+        _list_interfaces()
+        return
+
     conn = get_connection()
     console.print(f"[bold]NetLens[/bold] - live capture starting, writing to {DEFAULT_DB_PATH}")
+    if args.iface:
+        console.print(f"Interface: {args.iface}")
     console.print("Press Ctrl+C to stop.\n")
 
     packet_count = 0
@@ -48,7 +91,7 @@ def main() -> None:
     last_flow_table_at = time.monotonic()
 
     try:
-        for raw_bytes, timestamp in capture_packets():
+        for raw_bytes, timestamp in capture_packets(iface=args.iface):
             try:
                 record = decode(raw_bytes, timestamp)
                 store_packet(record, conn)
@@ -69,8 +112,10 @@ def main() -> None:
             due_by_time = now - last_flow_table_at >= FLOW_TABLE_EVERY_N_SECONDS
             if due_by_count or due_by_time:
                 last_flow_table_at = now
+                flows = group_into_flows(get_all_packets(conn))
+                store_flows(flows, conn)
                 console.print()
-                print_flow_table(group_into_flows(get_all_packets(conn)))
+                print_flow_table(flows)
                 console.print()
 
     except KeyboardInterrupt:
