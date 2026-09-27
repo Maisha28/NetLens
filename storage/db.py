@@ -20,6 +20,8 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from baseline.baseline import HostBaseline
+from detection.rules import Alert
 from shared.packet_record import PacketRecord
 from storage.flow_tracker import FlowKey, FlowStats
 
@@ -69,6 +71,30 @@ CREATE TABLE IF NOT EXISTS flows (
 )
 """
 
+BASELINES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS baselines (
+    host TEXT PRIMARY KEY,
+    ewma_bytes REAL NOT NULL,
+    ewma_packets REAL NOT NULL,
+    ewma_distinct_ports REAL NOT NULL,
+    samples_seen INTEGER NOT NULL,
+    last_updated REAL NOT NULL
+)
+"""
+
+ALERTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_name TEXT NOT NULL,
+    host TEXT NOT NULL,
+    observed_value REAL NOT NULL,
+    baseline_value REAL NOT NULL,
+    threshold_multiplier REAL NOT NULL,
+    timestamp REAL NOT NULL,
+    message TEXT NOT NULL
+)
+"""
+
 _COLUMNS = [
     "timestamp", "length", "src_mac", "dst_mac", "eth_type", "protocol",
     "src_ip", "dst_ip", "src_port", "dst_port", "ttl", "ip_total_length",
@@ -82,11 +108,23 @@ _FLOW_COLUMNS = [
     "packet_count", "byte_count", "first_seen", "last_seen",
 ]
 
+_BASELINE_COLUMNS = [
+    "host", "ewma_bytes", "ewma_packets", "ewma_distinct_ports",
+    "samples_seen", "last_updated",
+]
+
+_ALERT_COLUMNS = [
+    "rule_name", "host", "observed_value", "baseline_value",
+    "threshold_multiplier", "timestamp", "message",
+]
+
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.execute(SCHEMA)
     conn.execute(FLOWS_SCHEMA)
+    conn.execute(BASELINES_SCHEMA)
+    conn.execute(ALERTS_SCHEMA)
     conn.commit()
     return conn
 
@@ -166,6 +204,50 @@ def get_all_flows(conn: sqlite3.Connection) -> Dict[FlowKey, FlowStats]:
             last_seen=last_seen,
         )
     return flows
+
+
+def upsert_baseline(baseline: HostBaseline, conn: sqlite3.Connection) -> None:
+    """
+    One current row per host, not an append-log - baseline is re-derived
+    every interval (see baseline.BaselineTracker.update()), so replacing
+    is correct and appending would just pile up duplicates.
+    """
+    placeholders = ", ".join("?" for _ in _BASELINE_COLUMNS)
+    column_list = ", ".join(_BASELINE_COLUMNS)
+    conn.execute(
+        f"INSERT OR REPLACE INTO baselines ({column_list}) VALUES ({placeholders})",
+        [getattr(baseline, col) for col in _BASELINE_COLUMNS],
+    )
+    conn.commit()
+
+
+def get_all_baselines(conn: sqlite3.Connection) -> Dict[str, HostBaseline]:
+    cursor = conn.execute(f"SELECT {', '.join(_BASELINE_COLUMNS)} FROM baselines")
+    baselines: Dict[str, HostBaseline] = {}
+    for row in cursor.fetchall():
+        kwargs = dict(zip(_BASELINE_COLUMNS, row))
+        baselines[kwargs["host"]] = HostBaseline(**kwargs)
+    return baselines
+
+
+def store_alert(alert: Alert, conn: sqlite3.Connection) -> None:
+    """
+    Append-only, unlike flows and baselines - an alert is a historical
+    event, not a snapshot of current state, so every firing gets its own
+    row.
+    """
+    placeholders = ", ".join("?" for _ in _ALERT_COLUMNS)
+    column_list = ", ".join(_ALERT_COLUMNS)
+    conn.execute(
+        f"INSERT INTO alerts ({column_list}) VALUES ({placeholders})",
+        [getattr(alert, col) for col in _ALERT_COLUMNS],
+    )
+    conn.commit()
+
+
+def get_all_alerts(conn: sqlite3.Connection) -> List[Alert]:
+    cursor = conn.execute(f"SELECT {', '.join(_ALERT_COLUMNS)} FROM alerts ORDER BY id")
+    return [Alert(**dict(zip(_ALERT_COLUMNS, row))) for row in cursor.fetchall()]
 
 
 if __name__ == "__main__":
