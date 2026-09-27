@@ -36,13 +36,25 @@ from __future__ import annotations
 
 import argparse
 import time
+from typing import Dict, List
 
 from rich.console import Console
 
+from baseline.baseline import BaselineTracker, IntervalStats
 from capture.capture import capture_packets
 from decoder.decoder import decode
-from storage.db import DEFAULT_DB_PATH, get_all_packets, get_connection, store_flows, store_packet
-from storage.display import print_flow_table, print_packet_row
+from detection.rules import check_bandwidth_hog
+from shared.packet_record import PacketRecord
+from storage.db import (
+    DEFAULT_DB_PATH,
+    get_all_packets,
+    get_connection,
+    store_alert,
+    store_flows,
+    store_packet,
+    upsert_baseline,
+)
+from storage.display import print_alert, print_flow_table, print_packet_row
 from storage.flow_tracker import group_into_flows
 
 console = Console()
@@ -89,6 +101,8 @@ def main() -> None:
     packet_count = 0
     warning_count = 0
     last_flow_table_at = time.monotonic()
+    baseline_tracker = BaselineTracker()
+    interval_records: List[PacketRecord] = []
 
     try:
         for raw_bytes, timestamp in capture_packets(iface=args.iface):
@@ -97,6 +111,7 @@ def main() -> None:
                 store_packet(record, conn)
                 print_packet_row(record)
                 packet_count += 1
+                interval_records.append(record)
             except Exception as exc:
                 # One bad frame must never take the whole capture down -
                 # log it and keep going.
@@ -112,6 +127,28 @@ def main() -> None:
             due_by_time = now - last_flow_table_at >= FLOW_TABLE_EVERY_N_SECONDS
             if due_by_count or due_by_time:
                 last_flow_table_at = now
+                wall_clock_now = time.time()
+
+                interval_stats: Dict[str, IntervalStats] = {}
+                for interval_record in interval_records:
+                    if not interval_record.src_ip:
+                        continue
+                    stats = interval_stats.setdefault(interval_record.src_ip, IntervalStats())
+                    stats.byte_count += interval_record.length
+                    stats.packet_count += 1
+                    if interval_record.dst_port is not None:
+                        stats.distinct_dst_ports.add(interval_record.dst_port)
+
+                for host, stats in interval_stats.items():
+                    baseline_tracker.update(host, stats, wall_clock_now)
+                    upsert_baseline(baseline_tracker.get_baseline(host), conn)
+
+                for alert in check_bandwidth_hog(interval_stats, baseline_tracker):
+                    store_alert(alert, conn)
+                    print_alert(alert)
+
+                interval_records = []
+
                 flows = group_into_flows(get_all_packets(conn))
                 store_flows(flows, conn)
                 console.print()
