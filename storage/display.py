@@ -1,6 +1,8 @@
 """
 Person C's part: terminal output. print_packet_row() gives one line per
-packet; print_flow_table() summarises grouped flows. Both use `rich`.
+packet; print_flow_table() summarises grouped flows, enriched with each
+destination's organisation; print_alert() renders a detection Alert as a
+bordered panel, visually distinct from ordinary packet/flow output.
 """
 
 from __future__ import annotations
@@ -8,8 +10,11 @@ from __future__ import annotations
 from typing import Dict
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
+from detection.rules import Alert
+from enrichment.enrichment import resolve_org
 from shared.packet_record import PacketRecord
 from storage.flow_tracker import FlowKey, FlowStats
 
@@ -47,6 +52,7 @@ def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
     table.add_column("Protocol", style="bold")
     table.add_column("Source")
     table.add_column("Destination")
+    table.add_column("Organisation")
     table.add_column("Packets", justify="right")
     table.add_column("Bytes", justify="right")
     table.add_column("First seen", justify="right")
@@ -57,11 +63,13 @@ def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
         color = _PROTOCOL_COLORS.get(protocol, "white")
         src = f"{src_ip}:{src_port}" if src_port else src_ip
         dst = f"{dst_ip}:{dst_port}" if dst_port else dst_ip
+        organisation = resolve_org(dst_ip)
         duration = stats.last_seen - stats.first_seen
         table.add_row(
             f"[{color}]{protocol}[/{color}]",
             src,
             dst,
+            organisation,
             str(stats.packet_count),
             str(stats.byte_count),
             f"{stats.first_seen:.3f}",
@@ -70,6 +78,17 @@ def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
         )
 
     console.print(table)
+
+
+def print_alert(alert: Alert) -> None:
+    console.print(
+        Panel(
+            f"[bold red]{alert.message}[/bold red]",
+            title=f"[bold red]ALERT: {alert.rule_name}[/bold red]",
+            border_style="bold red",
+            expand=False,
+        )
+    )
 
 
 if __name__ == "__main__":
