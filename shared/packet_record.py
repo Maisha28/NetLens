@@ -56,5 +56,8 @@ class PacketRecord:
     dns_query_type: Optional[str] = None
     dns_answers: List[str] = field(default_factory=list)
 
+    # --- TLS extras (HTTPS ClientHello server name, cleartext). Not persisted. ---
+    tls_sni: Optional[str] = None
+
     # --- Fallback / debugging ---
     summary: Optional[str] = None   # short human-readable one-liner
