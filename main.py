@@ -35,6 +35,7 @@ Stop with Ctrl+C.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import time
 from typing import Dict, List
 
@@ -44,6 +45,7 @@ from baseline.baseline import BaselineTracker, IntervalStats
 from capture.capture import capture_packets
 from decoder.decoder import decode
 from detection.rules import check_bandwidth_hog
+from enrichment.hostnames import HostnameMap
 from shared.packet_record import PacketRecord
 from storage.db import (
     DEFAULT_DB_PATH,
@@ -61,6 +63,16 @@ console = Console()
 
 FLOW_TABLE_EVERY_N_PACKETS = 50
 FLOW_TABLE_EVERY_N_SECONDS = 10
+# Baselines/alerts use fixed time windows only, so every interval is
+# comparable (a packet-count window shrinks during a burst and hides it).
+DETECTION_WINDOW_SECONDS = 10
+
+
+def _is_local(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
 
 
 def _parse_args() -> argparse.Namespace:
@@ -75,6 +87,22 @@ def _parse_args() -> argparse.Namespace:
         "--list-interfaces",
         action="store_true",
         help="List available capture interfaces (name, description, GUID) and exit.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Hide per-packet rows so alerts and flow tables stay visible on screen.",
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Clear all stored packets, flows, baselines and alerts before capturing "
+        "(clean slate - otherwise earlier sessions are mixed into the flow table).",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Only show flows involving this IP, e.g. the phone's 192.168.137.x address.",
     )
     return parser.parse_args()
 
@@ -93,6 +121,11 @@ def main() -> None:
         return
 
     conn = get_connection()
+    if args.fresh:
+        for table in ("packets", "flows", "baselines", "alerts"):
+            conn.execute(f"DELETE FROM {table}")
+        conn.commit()
+        console.print("[dim]Cleared previous capture data.[/dim]")
     console.print(f"[bold]NetLens[/bold] - live capture starting, writing to {DEFAULT_DB_PATH}")
     if args.iface:
         console.print(f"Interface: {args.iface}")
@@ -101,15 +134,20 @@ def main() -> None:
     packet_count = 0
     warning_count = 0
     last_flow_table_at = time.monotonic()
+    last_detection_at = time.monotonic()
+    pending_alerts: list = []
     baseline_tracker = BaselineTracker()
+    hostnames = HostnameMap()
     interval_records: List[PacketRecord] = []
 
     try:
         for raw_bytes, timestamp in capture_packets(iface=args.iface):
             try:
                 record = decode(raw_bytes, timestamp)
+                hostnames.learn(record)
                 store_packet(record, conn)
-                print_packet_row(record)
+                if not args.quiet:
+                    print_packet_row(record)
                 packet_count += 1
                 interval_records.append(record)
             except Exception as exc:
@@ -129,31 +167,57 @@ def main() -> None:
                 last_flow_table_at = now
                 wall_clock_now = time.time()
 
-                interval_stats: Dict[str, IntervalStats] = {}
-                for interval_record in interval_records:
-                    if not interval_record.src_ip:
-                        continue
-                    stats = interval_stats.setdefault(interval_record.src_ip, IntervalStats())
-                    stats.byte_count += interval_record.length
-                    stats.packet_count += 1
-                    if interval_record.dst_port is not None:
-                        stats.distinct_dst_ports.add(interval_record.dst_port)
+                if now - last_detection_at >= DETECTION_WINDOW_SECONDS:
+                    last_detection_at = now
 
-                for host, stats in interval_stats.items():
-                    baseline_tracker.update(host, stats, wall_clock_now)
-                    upsert_baseline(baseline_tracker.get_baseline(host), conn)
+                    # Count a packet toward BOTH ends when they are local
+                    # devices, so a phone's downloads (it is the destination)
+                    # count as its traffic, not just its uploads.
+                    interval_stats: Dict[str, IntervalStats] = {}
+                    for interval_record in interval_records:
+                        for ip, is_sender in ((interval_record.src_ip, True), (interval_record.dst_ip, False)):
+                            if not ip or not _is_local(ip):
+                                continue
+                            stats = interval_stats.setdefault(ip, IntervalStats())
+                            stats.byte_count += interval_record.length
+                            stats.packet_count += 1
+                            if is_sender and interval_record.dst_port is not None:
+                                stats.distinct_dst_ports.add(interval_record.dst_port)
 
-                for alert in check_bandwidth_hog(interval_stats, baseline_tracker):
-                    store_alert(alert, conn)
-                    print_alert(alert)
+                    # Check against the PRIOR baseline, then learn from this
+                    # interval - otherwise the spike inflates its own baseline.
+                    new_alerts = check_bandwidth_hog(interval_stats, baseline_tracker)
+                    for alert in new_alerts:
+                        store_alert(alert, conn)
+                        print_alert(alert)
+                    pending_alerts.extend(new_alerts)
 
-                interval_records = []
+                    for host, stats in interval_stats.items():
+                        baseline_tracker.update(host, stats, wall_clock_now)
+                        upsert_baseline(baseline_tracker.get_baseline(host), conn)
+
+                    interval_records = []
 
                 flows = group_into_flows(get_all_packets(conn))
+                if args.host:
+                    all_flows = flows
+                    flows = {k: v for k, v in all_flows.items() if args.host in (k[0], k[2])}
+                    if not flows:
+                        seen = sorted({ip for k in all_flows for ip in (k[0], k[2]) if ip.startswith("192.168.137.")})
+                        console.print(
+                            f"[yellow]No flows involve {args.host}.[/yellow] "
+                            f"Hotspot addresses seen so far: {', '.join(seen) or 'none'}"
+                        )
+                        continue
                 store_flows(flows, conn)
                 console.print()
-                print_flow_table(flows)
+                print_flow_table(flows, hostnames)
                 console.print()
+                # Repeat alerts under the flow table so they are the last thing
+                # on screen when the table refreshes, not buried above it.
+                for alert in pending_alerts:
+                    print_alert(alert)
+                pending_alerts = []
 
     except KeyboardInterrupt:
         pass

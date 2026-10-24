@@ -369,6 +369,44 @@ def _parse_dns(payload: bytes) -> Optional[dict]:
     }
 
 
+def _parse_tls_sni(payload: bytes) -> Optional[str]:
+    """
+    Pull the server name out of a TLS ClientHello, or None if this payload
+    isn't one (or the hello is split across segments / has no SNI).
+
+      TLS record  : type 0x16 (handshake), version(2), length(2)
+      Handshake   : type 0x01 (ClientHello), length(3)
+      ClientHello : version(2), random(32), session_id(1+n),
+                    cipher_suites(2+n), compression(1+n), extensions(2+n)
+      Extension   : type(2), length(2); SNI is type 0:
+                    list_len(2), name_type(1)=0, name_len(2), name
+    """
+    try:
+        if len(payload) < 44 or payload[0] != 0x16 or payload[5] != 0x01:
+            return None
+        pos = 5 + 4 + 2 + 32
+        pos += 1 + payload[pos]  # session id
+        (n,) = struct.unpack("!H", payload[pos : pos + 2])
+        pos += 2 + n  # cipher suites
+        pos += 1 + payload[pos]  # compression methods
+        (ext_total,) = struct.unpack("!H", payload[pos : pos + 2])
+        pos += 2
+        end = min(pos + ext_total, len(payload))
+        while pos + 4 <= end:
+            ext_type, ext_len = struct.unpack("!HH", payload[pos : pos + 4])
+            pos += 4
+            if ext_type == 0:
+                name_type = payload[pos + 2]
+                (name_len,) = struct.unpack("!H", payload[pos + 3 : pos + 5])
+                if name_type != 0:
+                    return None
+                return payload[pos + 5 : pos + 5 + name_len].decode("ascii")
+            pos += ext_len
+    except (IndexError, struct.error, UnicodeDecodeError):
+        pass
+    return None
+
+
 def decode(raw_bytes: bytes, timestamp: float) -> PacketRecord:
     """Parse one raw frame into a PacketRecord. See module docstring."""
     eth = _parse_ethernet(raw_bytes)
@@ -474,6 +512,11 @@ def decode(raw_bytes: bytes, timestamp: float) -> PacketRecord:
             except (ValueError, struct.error):
                 dns = None  # not actually DNS, or malformed - keep the TCP record as-is
             _apply_dns(record, dns)
+
+        sni = _parse_tls_sni(tcp["payload"])
+        if sni:
+            record.tls_sni = sni
+            record.summary += f" TLS SNI {sni}"
 
     elif ip["protocol_num"] == IP_PROTO_UDP:
         udp = _parse_udp(ip["payload"])
