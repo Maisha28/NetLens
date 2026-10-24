@@ -72,7 +72,7 @@ def check_bandwidth_hog(
                 threshold_multiplier=multiplier,
                 timestamp=now,
                 message=(
-                    f"{host} sent {observed_bytes:,.0f} bytes this interval "
+                    f"{host} moved {observed_bytes:,.0f} bytes this interval "
                     f"— {actual_multiplier:.1f}x its baseline of {baseline_bytes:,.0f} bytes"
                 ),
             )

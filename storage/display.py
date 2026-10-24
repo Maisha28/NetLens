@@ -7,7 +7,7 @@ bordered panel, visually distinct from ordinary packet/flow output.
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -15,6 +15,7 @@ from rich.table import Table
 
 from detection.rules import Alert
 from enrichment.enrichment import resolve_org
+from enrichment.hostnames import HostnameMap
 from shared.packet_record import PacketRecord
 from storage.flow_tracker import FlowKey, FlowStats
 
@@ -47,11 +48,12 @@ def print_packet_row(record: PacketRecord) -> None:
     )
 
 
-def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
+def print_flow_table(flows: Dict[FlowKey, FlowStats], hostnames: Optional[HostnameMap] = None) -> None:
     table = Table(title="Flows", show_lines=False)
     table.add_column("Protocol", style="bold")
     table.add_column("Source")
     table.add_column("Destination")
+    table.add_column("Site", style="bold green")
     table.add_column("Organisation")
     table.add_column("Packets", justify="right")
     table.add_column("Bytes", justify="right")
@@ -64,11 +66,13 @@ def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
         src = f"{src_ip}:{src_port}" if src_port else src_ip
         dst = f"{dst_ip}:{dst_port}" if dst_port else dst_ip
         organisation = resolve_org(dst_ip)
+        site = hostnames.site(dst_ip, src_ip) if hostnames else ""
         duration = stats.last_seen - stats.first_seen
         table.add_row(
             f"[{color}]{protocol}[/{color}]",
             src,
             dst,
+            site,
             organisation,
             str(stats.packet_count),
             str(stats.byte_count),
@@ -83,7 +87,8 @@ def print_flow_table(flows: Dict[FlowKey, FlowStats]) -> None:
 def print_alert(alert: Alert) -> None:
     console.print(
         Panel(
-            f"[bold red]{alert.message}[/bold red]",
+            f"[bold red]{alert.message}[/bold red]\n"
+            f"[red]Organisation: {resolve_org(alert.host)}[/red]",
             title=f"[bold red]ALERT: {alert.rule_name}[/bold red]",
             border_style="bold red",
             expand=False,
