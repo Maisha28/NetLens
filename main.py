@@ -1,117 +1,79 @@
 """
-Day 2 integration: wires the three independent modules built on Day 1
-into one live pipeline. All the real logic (capturing, decoding,
-storing, displaying) stays in capture/, decoder/, and storage/ - this
-file only sequences calls between them:
+NetLens terminal mode - the same pipeline as the web dashboard, printed to the console.
 
-    capture.capture_packets()  ->  decoder.decode()  ->  storage.db.store_packet()
-                                                      ->  storage.display.print_packet_row()
+    capture.capture_packets() -> engine.Engine (decode -> flows -> SQLite -> baselines
+                                 -> bandwidth_hog / port_scan / arp_spoof -> signed ledger)
+                              -> rich packet rows, flow tables and alert panels
 
-Every ~50 packets (or ~10 seconds of traffic, whichever comes first),
-it also pulls everything stored so far, groups it into flows, and
-prints a flow summary table.
+Engine is shared with `python app.py` (the browser dashboard), so the two
+interfaces can never disagree about what was detected.
 
-Run:
-    python main.py
-Stop with Ctrl+C.
-
-See capture/capture.py's module docstring for the Administrator/Npcap
-requirements this depends on - if capture can't open the interface,
-that same guidance is surfaced below instead of a raw traceback.
-
-To capture a phone's traffic through a Windows mobile hotspot, scapy's
-default interface is often the wrong one - the hotspot's clients show up
-on a separate virtual adapter (typically named "Local Area Connection*
-N", description "Microsoft Wi-Fi Direct Virtual Adapter"). Run with
---list-interfaces to see every adapter Npcap can see, then pass the
-right one with --iface "<name>".
-
-Run:
+Run (Administrator terminal + Npcap, see capture/capture.py):
     python main.py --list-interfaces
     python main.py --iface "Local Area Connection* 3"
 Stop with Ctrl+C.
+
+To capture a phone's traffic through a Windows mobile hotspot, scapy's default
+interface is often the wrong one - the hotspot's clients show up on a separate
+virtual adapter (typically "Local Area Connection* N", description "Microsoft
+Wi-Fi Direct Virtual Adapter"). Run with --list-interfaces to see every adapter,
+then pass the right one with --iface "<name>".
 """
 
 from __future__ import annotations
 
 import argparse
-import ipaddress
 import time
-from typing import Dict, List
 
 from rich.console import Console
 
-from baseline.baseline import BaselineTracker, IntervalStats
 from capture.capture import capture_packets
-from decoder.decoder import decode
-from detection.rules import check_bandwidth_hog
-from enrichment.hostnames import HostnameMap
-from shared.packet_record import PacketRecord
-from storage.db import (
-    DEFAULT_DB_PATH,
-    get_all_packets,
-    get_connection,
-    store_alert,
-    store_flows,
-    store_packet,
-    upsert_baseline,
-)
+from detection.rules import Alert
+from engine.engine import Engine
+from storage.db import DEFAULT_DB_PATH
 from storage.display import print_alert, print_flow_table, print_packet_row
-from storage.flow_tracker import group_into_flows
 
 console = Console()
 
 FLOW_TABLE_EVERY_N_PACKETS = 50
 FLOW_TABLE_EVERY_N_SECONDS = 10
-# Baselines/alerts use fixed time windows only, so every interval is
-# comparable (a packet-count window shrinks during a burst and hides it).
 DETECTION_WINDOW_SECONDS = 10
 
 
-def _is_local(ip: str) -> bool:
-    try:
-        return ipaddress.ip_address(ip).is_private
-    except ValueError:
-        return False
-
-
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="NetLens - live packet capture, decode, and flow view.")
+    parser = argparse.ArgumentParser(description="NetLens - live packet capture, decode, flow view and alerts.")
     parser.add_argument(
         "--iface",
         default=None,
         help='Interface name to capture on, e.g. "Local Area Connection* 3" '
         "(the hotspot's virtual adapter). Defaults to scapy's active interface.",
     )
-    parser.add_argument(
-        "--list-interfaces",
-        action="store_true",
-        help="List available capture interfaces (name, description, GUID) and exit.",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Hide per-packet rows so alerts and flow tables stay visible on screen.",
-    )
+    parser.add_argument("--list-interfaces", action="store_true", help="List capture interfaces and exit.")
+    parser.add_argument("--quiet", action="store_true", help="Hide per-packet rows so alerts and flow tables stay visible.")
     parser.add_argument(
         "--fresh",
         action="store_true",
-        help="Clear all stored packets, flows, baselines and alerts before capturing "
-        "(clean slate - otherwise earlier sessions are mixed into the flow table).",
+        help="Clear all stored packets, flows, baselines and alerts before capturing.",
     )
-    parser.add_argument(
-        "--host",
-        default=None,
-        help="Only show flows involving this IP, e.g. the phone's 192.168.137.x address.",
-    )
+    parser.add_argument("--host", default=None, help="Only show flows involving this IP, e.g. the phone's 192.168.137.x address.")
+    parser.add_argument("--window", type=float, default=DETECTION_WINDOW_SECONDS, help="Detection window in seconds.")
     return parser.parse_args()
 
 
 def _list_interfaces() -> None:
-    from scapy.arch import get_windows_if_list
+    from web.system import list_interfaces
 
-    for iface in get_windows_if_list():
-        console.print(f"[bold]{iface.get('name')}[/bold]  -  {iface.get('description')}")
+    for iface in (i for i in list_interfaces() if not i["noise"]):
+        tag = "  [bold green]<- hotspot[/bold green]" if iface["recommended"] else ""
+        console.print(f"[bold]{iface['name']}[/bold]  -  {iface['description']}  {' '.join(iface['ips'])}{tag}")
+
+
+def _as_alert(rec: dict) -> Alert:
+    return Alert(
+        rule_name=rec["rule"], host=rec["host"], observed_value=rec["observed"], baseline_value=rec["baseline"],
+        threshold_multiplier=rec["threshold"], timestamp=rec["ts"], message=rec["message"],
+        evidence=rec["evidence"], severity=rec["severity"],
+    )
 
 
 def main() -> None:
@@ -120,12 +82,21 @@ def main() -> None:
         _list_interfaces()
         return
 
-    conn = get_connection()
+    engine = Engine(db_path=DEFAULT_DB_PATH, window_seconds=args.window, time_source="wall", fresh=args.fresh)
     if args.fresh:
-        for table in ("packets", "flows", "baselines", "alerts"):
-            conn.execute(f"DELETE FROM {table}")
-        conn.commit()
         console.print("[dim]Cleared previous capture data.[/dim]")
+    pending_alerts: list = []
+    if not args.quiet:
+        engine.on_packet.append(print_packet_row)
+
+    def on_alert(rec: dict) -> None:
+        alert = _as_alert(rec)
+        print_alert(alert)
+        pending_alerts.append(alert)
+
+    engine.on_alert.append(on_alert)
+    engine.start_ticker()
+
     console.print(f"[bold]NetLens[/bold] - live capture starting, writing to {DEFAULT_DB_PATH}")
     if args.iface:
         console.print(f"Interface: {args.iface}")
@@ -133,91 +104,36 @@ def main() -> None:
 
     packet_count = 0
     warning_count = 0
-    last_flow_table_at = time.monotonic()
-    last_detection_at = time.monotonic()
-    pending_alerts: list = []
-    baseline_tracker = BaselineTracker()
-    hostnames = HostnameMap()
-    interval_records: List[PacketRecord] = []
-
+    last_table = time.monotonic()
     try:
         for raw_bytes, timestamp in capture_packets(iface=args.iface):
-            try:
-                record = decode(raw_bytes, timestamp)
-                hostnames.learn(record)
-                store_packet(record, conn)
-                if not args.quiet:
-                    print_packet_row(record)
-                packet_count += 1
-                interval_records.append(record)
-            except Exception as exc:
-                # One bad frame must never take the whole capture down -
-                # log it and keep going.
+            before = engine.counters["decode_errors"] + engine.counters["pipeline_errors"]
+            engine.ingest_frame(raw_bytes, timestamp)
+            if engine.counters["decode_errors"] + engine.counters["pipeline_errors"] > before:
+                # One bad frame must never take the whole capture down - log it and keep going.
                 warning_count += 1
-                console.print(
-                    f"[yellow]warning:[/yellow] skipped a {len(raw_bytes)}-byte frame "
-                    f"({type(exc).__name__}: {exc})"
-                )
+                console.print(f"[yellow]warning:[/yellow] skipped a {len(raw_bytes)}-byte frame")
                 continue
+            packet_count += 1
 
             now = time.monotonic()
-            due_by_count = packet_count % FLOW_TABLE_EVERY_N_PACKETS == 0
-            due_by_time = now - last_flow_table_at >= FLOW_TABLE_EVERY_N_SECONDS
-            if due_by_count or due_by_time:
-                last_flow_table_at = now
-                wall_clock_now = time.time()
-
-                if now - last_detection_at >= DETECTION_WINDOW_SECONDS:
-                    last_detection_at = now
-
-                    # Count a packet toward BOTH ends when they are local
-                    # devices, so a phone's downloads (it is the destination)
-                    # count as its traffic, not just its uploads.
-                    interval_stats: Dict[str, IntervalStats] = {}
-                    for interval_record in interval_records:
-                        for ip, is_sender in ((interval_record.src_ip, True), (interval_record.dst_ip, False)):
-                            if not ip or not _is_local(ip):
-                                continue
-                            stats = interval_stats.setdefault(ip, IntervalStats())
-                            stats.byte_count += interval_record.length
-                            stats.packet_count += 1
-                            if is_sender and interval_record.dst_port is not None:
-                                stats.distinct_dst_ports.add(interval_record.dst_port)
-
-                    # Check against the PRIOR baseline, then learn from this
-                    # interval - otherwise the spike inflates its own baseline.
-                    new_alerts = check_bandwidth_hog(interval_stats, baseline_tracker)
-                    for alert in new_alerts:
-                        store_alert(alert, conn)
-                        print_alert(alert)
-                    pending_alerts.extend(new_alerts)
-
-                    for host, stats in interval_stats.items():
-                        baseline_tracker.update(host, stats, wall_clock_now)
-                        upsert_baseline(baseline_tracker.get_baseline(host), conn)
-
-                    interval_records = []
-
-                flows = group_into_flows(get_all_packets(conn))
+            if packet_count % FLOW_TABLE_EVERY_N_PACKETS == 0 or now - last_table >= FLOW_TABLE_EVERY_N_SECONDS:
+                last_table = now
+                with engine.lock:
+                    flows = dict(engine.flows)
                 if args.host:
-                    all_flows = flows
-                    flows = {k: v for k, v in all_flows.items() if args.host in (k[0], k[2])}
+                    flows = {k: v for k, v in flows.items() if args.host in (k[0], k[2])}
                     if not flows:
-                        seen = sorted({ip for k in all_flows for ip in (k[0], k[2]) if ip.startswith("192.168.137.")})
-                        console.print(
-                            f"[yellow]No flows involve {args.host}.[/yellow] "
-                            f"Hotspot addresses seen so far: {', '.join(seen) or 'none'}"
-                        )
+                        seen = sorted({ip for k in engine.flows for ip in (k[0], k[2]) if ip.startswith("192.168.137.")})
+                        console.print(f"[yellow]No flows involve {args.host}.[/yellow] Hotspot addresses seen so far: {', '.join(seen) or 'none'}")
                         continue
-                store_flows(flows, conn)
                 console.print()
-                print_flow_table(flows, hostnames)
+                print_flow_table(flows, engine.hostnames)
                 console.print()
-                # Repeat alerts under the flow table so they are the last thing
-                # on screen when the table refreshes, not buried above it.
+                # Repeat alerts under the flow table so they are the last thing on screen.
                 for alert in pending_alerts:
                     print_alert(alert)
-                pending_alerts = []
+                pending_alerts.clear()
 
     except KeyboardInterrupt:
         pass
@@ -228,7 +144,7 @@ def main() -> None:
             "and make sure Npcap is installed (https://npcap.com/) with "
             "'Install Npcap in WinPcap API-compatible Mode' enabled."
         )
-        conn.close()
+        engine.shutdown()
         return
     except OSError as exc:
         console.print(
@@ -236,10 +152,10 @@ def main() -> None:
             "Most likely causes: Npcap is not installed, the terminal isn't "
             "running as Administrator, or no active network interface was found."
         )
-        conn.close()
+        engine.shutdown()
         return
 
-    conn.close()
+    engine.shutdown()
     console.print(f"\nStopped. Processed {packet_count} packet(s), {warning_count} warning(s).")
 
 

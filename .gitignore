@@ -4,3 +4,9 @@ __pycache__/
 *.pcap
 *.db
 .DS_Store
+
+# NetLens runtime files
+storage/.ledger_key
+captures/
+.pytest_cache/
+*.db-journal
