@@ -35,8 +35,11 @@ class PcapRecorder:
         self._file.write(_GLOBAL_HEADER)
         self._file.flush()
         self.packets = 0
+        self._closed = False
 
     def write(self, raw: bytes, ts: float) -> None:
+        if self._closed:
+            return  # a stale capture thread can still be running just after a source switch
         sec = int(ts)
         usec = int((ts - sec) * 1_000_000)
         self._file.write(struct.pack("<IIII", sec, usec, len(raw), len(raw)) + raw)
@@ -45,10 +48,13 @@ class PcapRecorder:
             self._file.flush()
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         try:
             self._file.flush()
             self._file.close()
-        except OSError:
+        except (OSError, ValueError):
             pass
 
 

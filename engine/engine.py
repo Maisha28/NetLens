@@ -261,13 +261,19 @@ class Engine:
                         continue
                     self.ingest_frame(raw, ts)
             except PermissionError:
+                if run_id != self._run_id:
+                    return  # an old source failing after being replaced must not blame the new one
                 self.source_error = (
                     "Permission denied opening the capture device. Run from an Administrator "
                     "terminal with Npcap installed (WinPcap-compatible mode)."
                 )
             except OSError as exc:
+                if run_id != self._run_id:
+                    return
                 self.source_error = f"Capture failed to start ({exc}). Is Npcap installed and is the interface correct?"
             except Exception as exc:  # never let the thread die silently
+                if run_id != self._run_id:
+                    return
                 self.source_error = f"{type(exc).__name__}: {exc}"
 
         thread = threading.Thread(target=loop, daemon=True, name=f"netlens-source-{mode}")
