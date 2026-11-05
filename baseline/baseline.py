@@ -23,6 +23,7 @@ class IntervalStats:
     byte_count: int = 0
     packet_count: int = 0
     distinct_dst_ports: Set[int] = field(default_factory=set)
+    distinct_dst_ips: Set[str] = field(default_factory=set)
 
 
 @dataclass
