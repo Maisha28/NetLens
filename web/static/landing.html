@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetLens - See your network. Understand it.</title>
+<meta name="description" content="NetLens watches the traffic of your own devices, learns what is normal for each one, and tells you in plain English when something is not - without reading a single message.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='none' stroke='%233ee6c4' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%235b8cff'/%3E%3C/svg%3E">
+<script>
+  /* Apply the saved theme before first paint (landing defaults to dark). */
+  (function () {
+    try { var t = JSON.parse(localStorage.getItem("netlens.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="css/landing.css">
+
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3ee6c4"/><stop offset="1" stop-color="#5b8cff"/></linearGradient></defs>
+</svg>
+
+<div class="scrollbar" id="scrollbar"></div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#top" aria-label="NetLens home">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="url(#lg)" stroke-width="5"/><circle cx="32" cy="32" r="17" fill="none" stroke="url(#lg)" stroke-width="2" opacity=".55"/><circle cx="32" cy="32" r="7" fill="url(#lg)"/><circle cx="50" cy="18" r="3.4" fill="#ffb454"/><circle cx="14" cy="42" r="2.6" fill="#a78bfa"/></svg>
+    <b>NetLens</b>
+  </a>
+  <nav class="links">
+    <a href="#features">Features</a><a href="#compare">Why not Wireshark?</a>
+  </nav>
+  <div class="actions">
+    <button class="icon-btn" id="themeBtn" aria-label="Switch between dark and light theme" title="Switch theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="btn primary" href="/dashboard">Open dashboard <span aria-hidden="true">→</span></a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ======================================================== HERO -->
+  <section class="hero">
+    <div class="aurora"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+    <div class="grid-bg"></div>
+    <canvas id="heroNet" aria-hidden="true"></canvas>
+
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="pill reveal"><span class="dot"></span> Network intelligence · metadata only · 100% on your laptop</div>
+        <h1 class="reveal d1">See your network.<br><span class="grad">Understand it.</span></h1>
+        <p class="lead reveal d2">NetLens watches the traffic of <b>your own devices</b>, learns what is normal for each one, and tells you in plain English when something is not - <b>without ever reading a single message</b>.</p>
+        <div class="cta-row reveal d3">
+          <a class="btn primary lg" href="/dashboard">Open the dashboard <span aria-hidden="true">→</span></a>
+          
+        </div>
+        <ul class="trust reveal d4">
+          <li>No cloud</li><li>No machine learning</li><li>Works offline</li><li>Tamper-proof evidence</li>
+        </ul>
+      </div>
+
+      <div class="hero-float">
+        <div class="glass ticker reveal d2" aria-label="Live decode example">
+          <div class="t-head"><span class="live"></span> LIVE DECODE <small>example</small></div>
+          <div class="t-rows" id="ticker"></div>
+        </div>
+        <div class="chip c1" id="chipA"><i class="ok"></i><span>Baseline learned</span></div>
+        <div class="chip c2" id="chipB"><i class="bad"></i><span>Alert · Port scan</span></div>
+        <div class="chip c3" id="chipC"><i class="info"></i><span>Sealed in ledger</span></div>
+      </div>
+    </div>
+
+    <a class="scroll-cue" href="#features" aria-label="Scroll down"><span></span></a>
+  </section>
+
+  <!-- ===================================================== FEATURES -->
+  <section id="features" class="section">
+    <div class="wrap">
+      <div class="eyebrow reveal">What NetLens does</div>
+      <h2 class="reveal d1">A smoke detector for your network,<br>not a microscope.</h2>
+      <p class="sub reveal d2">Wireshark shows you everything. NetLens tells you what matters - and proves it.</p>
+
+      <div class="cards">
+        <article class="card tilt reveal"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="1.8"/><circle cx="19.5" cy="6" r="1.8"/><circle cx="19.5" cy="18" r="1.8"/><path d="M6 7l4.5 3.2M18 7l-4.5 3.2M18 17l-4.5-3.2"/></svg></div><h3>Live network map</h3><p>Your devices, this laptop and the internet - with real packets moving between them, named by site and company.</p></article>
+        <article class="card tilt reveal d1"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l3-7 4 14 3-7h5"/></svg></div><h3>Learns "normal"</h3><p>Every device gets its own baseline. Alerts mean <i>unusual for this device</i>, not "above some fixed number".</p></article>
+        <article class="card tilt reveal d2"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg></div><h3>Plain-English alerts</h3><p>Port scans, heavy data use and impersonation - each with the numbers behind it and what it could mean.</p></article>
+        <article class="card tilt reveal d3"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></div><h3>Encryption audit</h3><p>Grades every secure connection A to F from its cleartext handshake. Flags weak crypto - without decrypting anything.</p></article>
+        <article class="card tilt reveal"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></div><h3>Tamper-proof evidence</h3><p>Every alert is sealed in a SHA-256 hash chain with an HMAC signature. Edit one and the chain breaks.</p></article>
+        <article class="card tilt reveal d1"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></div><h3>Security score</h3><p>An A-F grade per device with every deduction explained - and a printable one-page report for an admin.</p></article>
+        <article class="card tilt reveal d2"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 20h12M5 8h14"/><path d="M5 8l-3 7a3 3 0 006 0zM19 8l-3 7a3 3 0 006 0z"/></svg></div><h3>Tuning lab</h3><p>Replays a labelled recording under different settings and scores every alert. Thresholds measured, not guessed.</p></article>
+        <article class="card tilt reveal d3"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div><h3>Works anywhere</h3><p>Live capture of your phone, a built-in simulation, or replay of a saved recording. No internet needed.</p></article>
+      </div>
+    </div>
+  </section>
+
+  
+
+  <!-- ====================================================== COMPARE -->
+  <section id="compare" class="section">
+    <div class="wrap">
+      <div class="eyebrow reveal">Why not just use Wireshark?</div>
+      <h2 class="reveal d1">Different job. Honestly.</h2>
+      <p class="sub reveal d2">Wireshark is the best tool in the world for studying a packet. NetLens answers the question that comes first: <b>is anything wrong?</b></p>
+
+      <div class="compare reveal">
+        <div class="crow head"><div></div><div>Wireshark</div><div class="us">NetLens</div></div>
+        <div class="crow"><div>Built for</div><div>Experts investigating a known problem</div><div class="us">Anyone who wants to know if something is wrong</div></div>
+        <div class="crow"><div>How it runs</div><div>You capture, then inspect by hand</div><div class="us">Always on - raises alerts as it happens</div></div>
+        <div class="crow"><div>What is "normal"?</div><div>You must already know what to filter for</div><div class="us">Learns each device's normal automatically</div></div>
+        <div class="crow"><div>Names</div><div>Raw addresses unless you resolve them</div><div class="us">"YouTube · Google" - offline, from DNS and TLS handshakes</div></div>
+        <div class="crow"><div>Encryption</div><div>Shows the handshake; judging it is up to you</div><div class="us">Grades every handshake A-F and flags weak crypto</div></div>
+        <div class="crow"><div>Evidence</div><div>A capture file anyone can edit</div><div class="us">Sealed in a tamper-evident log (hash chain + HMAC)</div></div>
+        <div class="crow"><div>Report</div><div>-</div><div class="us">A-F security score per device, printable</div></div>
+        <div class="crow strong"><div>Reading one packet</div><div class="win">Unmatched: thousands of protocols, deep analysis</div><div class="us">Core protocols only (Ethernet, IP, TCP, UDP, ARP, DNS, TLS hello)</div></div>
+      </div>
+      <p class="fine center reveal">Use NetLens to <b>notice</b>, Wireshark to <b>dig deeper</b>. They complement each other.</p>
+    </div>
+  </section>
+
+  <!-- =========================================================== CTA -->
+  <section class="final section">
+    <div class="aurora small"><i class="a1"></i><i class="a2"></i></div>
+    <div class="wrap center">
+      <h2 class="reveal">Ready to see your own network?</h2>
+      <p class="sub reveal d1">Connect your phone to your laptop's hotspot, or try the built-in simulation - no hardware needed.</p>
+      <div class="cta-row center reveal d2">
+        <a class="btn primary lg" href="/dashboard">Open the dashboard <span aria-hidden="true">→</span></a>
+      </div>
+      <p class="fine reveal d3">Live capture needs Administrator rights and Npcap. Only ever monitor your own devices on your own network.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><b>NetLens</b> · Sem V Mini Project · Sardar Patel Institute of Technology · Maisha Vageriya · Jalak Shah · Dhyani Sanghvi</div>
+</footer>
+
+<script src="js/landing-hero.js"></script>
+
+</body>
+</html>

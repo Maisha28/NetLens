@@ -5,7 +5,7 @@ No Flask, no CDN, no fonts fetched: the whole UI is served from web/static/, so
 the demo works with the network unplugged (the project's "no API can fail on
 demo day" rule applies to the front end too).
 
-    GET  /                       the single-page dashboard
+    GET  /                       the landing page;  GET /dashboard  the single-page dashboard
     GET  /api/state              full snapshot (hosts, conversations, TLS, alerts, ...)
     GET  /api/feed?since=N       packets newer than sequence N
     GET  /api/packet/<seq>       field-by-field decode of one frame (Packet Lab)
@@ -187,7 +187,12 @@ def make_handler(app: App):
                 return {}
 
         def _static(self, path: str) -> None:
-            rel = "index.html" if path in ("", "/") else path.lstrip("/").removeprefix("static/")
+            if path in ("", "/"):
+                rel = "landing.html"          # the welcome page
+            elif path.rstrip("/") == "/dashboard":
+                rel = "index.html"            # the application
+            else:
+                rel = path.lstrip("/").removeprefix("static/")
             target = (STATIC_DIR / rel).resolve()
             if STATIC_DIR not in target.parents and target != STATIC_DIR:
                 return self._json({"error": "forbidden"}, 403)

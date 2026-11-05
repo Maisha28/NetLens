@@ -144,11 +144,14 @@ def post(url, body):
         return exc.code, json.loads(exc.read())
 
 
-def test_index_and_static_assets_are_served(server):
+def test_landing_page_dashboard_and_static_assets_are_served(server):
     base, _ = server
     status, body = get(base + "/")
-    assert status == 200 and b"NetLens" in body
-    for asset in ("css/style.css", "js/app.js", "js/charts.js"):
+    assert status == 200 and b"See your network." in body and b"/dashboard" in body   # landing page
+    status, body = get(base + "/dashboard")
+    assert status == 200 and b'id="pageTitle"' in body                                  # the application
+    assert get(base + "/dashboard/")[0] == 200
+    for asset in ("css/style.css", "css/landing.css", "js/app.js", "js/charts.js", "js/landing-hero.js"):
         assert get(f"{base}/{asset}")[0] == 200
 
 
