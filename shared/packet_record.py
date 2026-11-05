@@ -11,7 +11,7 @@ depend on this shape matching exactly.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -58,6 +58,12 @@ class PacketRecord:
 
     # --- TLS extras (HTTPS ClientHello server name, cleartext). Not persisted. ---
     tls_sni: Optional[str] = None
+    # Parsed TLS Client/ServerHello metadata (version, JA3, cipher grade, ...)
+    # from crypto.tls. Cleartext handshake fields only. Not persisted.
+    tls_info: Optional[Dict] = None
+    # Name of a cleartext application protocol spotted from the first bytes of
+    # a TCP payload ("HTTP", "FTP", ...). Only the NAME is kept, never content.
+    cleartext: Optional[str] = None
 
     # --- Fallback / debugging ---
     summary: Optional[str] = None   # short human-readable one-liner

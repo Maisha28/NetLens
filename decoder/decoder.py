@@ -23,6 +23,7 @@ from __future__ import annotations
 import struct
 from typing import List, Optional, Tuple
 
+from crypto.tls import parse_tls
 from shared.packet_record import PacketRecord
 
 # EtherType values (Ethernet II, bytes 12-13 of the frame)
@@ -46,6 +47,11 @@ TCP_FLAG_BITS = (
 )
 
 DNS_PORT = 53
+
+# Cleartext application protocols recognised from the first bytes of a TCP
+# payload. Only the protocol NAME is recorded - content is never stored.
+_HTTP_MARKERS = (b"GET ", b"POST ", b"PUT ", b"HEAD ", b"DELETE ", b"OPTIONS ", b"HTTP/1.")
+_CLEARTEXT_PORTS = {21: "FTP", 23: "Telnet", 25: "SMTP", 110: "POP3", 143: "IMAP"}
 
 ETHERNET_HEADER_LEN = 14
 VLAN_TAG_LEN = 4
@@ -517,6 +523,23 @@ def decode(raw_bytes: bytes, timestamp: float) -> PacketRecord:
         if sni:
             record.tls_sni = sni
             record.summary += f" TLS SNI {sni}"
+
+        tls = parse_tls(tcp["payload"])
+        if tls:
+            record.tls_info = tls
+            if tls["kind"] == "client_hello":
+                record.summary += f" ClientHello {tls['version']}"
+            else:
+                record.summary += f" ServerHello {tls['version']} {tls['cipher']}"
+        elif tcp["payload"]:
+            if tcp["payload"].startswith(_HTTP_MARKERS):
+                record.cleartext = "HTTP"
+            else:
+                port_name = _CLEARTEXT_PORTS.get(tcp["dst_port"]) or _CLEARTEXT_PORTS.get(tcp["src_port"])
+                if port_name:
+                    record.cleartext = port_name
+            if record.cleartext:
+                record.summary += f" cleartext {record.cleartext}"
 
     elif ip["protocol_num"] == IP_PROTO_UDP:
         udp = _parse_udp(ip["payload"])
