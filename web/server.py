@@ -18,7 +18,10 @@ demo day" rule applies to the front end too).
     POST /api/source  (modes)    live | sim | pcap | stop  - switching always starts from a clean slate
     GET  /api/report             downloadable JSON evidence bundle
     GET  /api/security           per-device security grades (A-F) with every deduction explained
-
+    GET  /api/tuning/info        recordings that can be studied + the detector's tunable settings
+    POST /api/tuning/benchmark   (re)generate the labelled benchmark recording
+    POST /api/tuning/run         {"kind": "study"|"sweep"|"holdout", "capture": "...", "param": "..."}
+    GET  /api/tuning/job         progress / result of the running study
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from urllib.parse import parse_qs, urlparse
 from capture.pcap_io import PcapRecorder, list_captures, replay_pcap, resolve_capture
 from engine.engine import Engine
 from sim.scenario import SCENARIOS, Simulator
+from tuning.lab import TuningLab
 from web import system
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -50,6 +54,7 @@ class App:
         engine.simulator = simulator
         self.frame_source = frame_source
         self.recorder: Optional[PcapRecorder] = None
+        self.lab = TuningLab()
         self.started = time.time()
 
     # --- source switching -------------------------------------------------
@@ -217,6 +222,10 @@ def make_handler(app: App):
                     )
                 if path == "/api/security":
                     return self._json(app.engine.security_report())
+                if path == "/api/tuning/info":
+                    return self._json(app.lab.info())
+                if path == "/api/tuning/job":
+                    return self._json(app.lab.job())
                 if path == "/api/system":
                     return self._json({**system.system_check(), "recordings": app.recordings(),
                                        "mode": app.engine.mode, "meta": app.engine.meta})
@@ -240,6 +249,10 @@ def make_handler(app: App):
                     if app.engine.mode != "sim" or app.sim is None:
                         return self._json({"error": "Scenarios are staged only in simulation mode."}, 409)
                     return self._json(app.sim.trigger(body.get("name", "")))
+                if path == "/api/tuning/benchmark":
+                    return self._json(app.lab.generate_benchmark())
+                if path == "/api/tuning/run":
+                    return self._json(app.lab.start(body.get("kind", ""), body.get("capture", ""), body.get("param")))
                 if path == "/api/control":
                     return self._json(app.control(body.get("action", "")))
                 if path == "/api/source":

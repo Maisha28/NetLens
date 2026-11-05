@@ -21,16 +21,16 @@ from __future__ import annotations
 import struct
 import time
 from pathlib import Path
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Optional, Tuple
 
 CAPTURE_DIR = Path(__file__).resolve().parent.parent / "captures"
 _GLOBAL_HEADER = struct.pack("<IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, 65535, 1)
 
 
 class PcapRecorder:
-    def __init__(self, directory: Path = CAPTURE_DIR, prefix: str = "live") -> None:
+    def __init__(self, directory: Path = CAPTURE_DIR, prefix: str = "live", filename: Optional[str] = None) -> None:
         directory.mkdir(parents=True, exist_ok=True)
-        self.path = directory / f"{prefix}-{time.strftime('%Y%m%d-%H%M%S')}.pcap"
+        self.path = directory / (filename or f"{prefix}-{time.strftime('%Y%m%d-%H%M%S')}.pcap")
         self._file = open(self.path, "wb")
         self._file.write(_GLOBAL_HEADER)
         self._file.flush()
@@ -73,8 +73,13 @@ def resolve_capture(name: str) -> Path:
 
 def replay_pcap(path: Path, speed: float = 1.0) -> Iterator[Tuple[bytes, float]]:
     """Yield (raw, timestamp) at the original pace (scaled by speed; gaps capped at 1s)."""
+    import logging
+
     from scapy.utils import PcapReader
 
+    # scapy warns "unknown LL type" because only its utils are imported here; the bytes are
+    # returned untouched either way, so the warning is noise.
+    logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
     previous = None
     with PcapReader(str(path)) as reader:
         for pkt in reader:

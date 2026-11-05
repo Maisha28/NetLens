@@ -52,8 +52,30 @@ Terminal-only mode (same engine): `python main.py --iface "<adapter>"`.
 | Crypto & Integrity | Passive TLS handshake audit (versions, cipher grades, JA3), plaintext findings, and the HMAC-sealed hash-chain ledger with a tamper demo |
 | Pipeline | The 8-stage data path with live counters and the real last packet at each stage |
 | Demo Playbook | Do / you'll see / say, ticking itself off as NetLens detects each result |
+| Security score | An A-F grade per device with every deduction explained and what to do about it; prints as a one-page report for an IT admin |
+| Tuning lab | Replays one labelled recording under different detector settings and scores every alert right or wrong: before/after study, one-setting sweeps, held-out check |
 
 Toggle **Guide** in the header to hide/show the plain-language explanations.
+
+## Evidence it works: the Tuning Lab
+
+A detector is only useful if it catches real problems without crying wolf, so the thresholds are *measured*, not guessed. The Tuning Lab replays **one** recording in which every event has a known right answer (7 attacks and 5 harmless-but-unusual events such as a printer-discovery burst or a software update) under different settings, and marks each alert caught / repeat / false.
+
+| | Alerts | False alarms | Attacks caught |
+|---|---|---|---|
+| Untuned first attempt | 75 | 52 | 7 / 7 |
+| Shipped settings (after 6 measured changes) | 8 | 0 | 7 / 7 |
+| **Held-out** traffic (5 unseen variations), shipped settings | 40 | 1 | 34 / 35 |
+| **Held-out** traffic, untuned | 388 | 269 | 35 / 35 |
+
+- Each tuning step has a measured effect (for example counting only connection attempts removed 26 false alarms by no longer mistaking a DNS server for a scanner).
+- "Don't learn from alerts" has a measured trade-off: it keeps a sustained attack flagged for every window (67% to 100%) at the cost of extra repeat alerts, which the 12 s suppression then removes.
+- One-setting sweeps show the shipped values sit on a flat plateau (heavy-use multiplier 2.5x to 4x, minimum volume 20 to 100 KB/s), not on an edge. The 40 KB/s volume floor was moved there *because* the lab showed 15 KB/s sat just below the plateau.
+- Honest limits: the benchmark is synthetic and says so; it measures trade-offs reproducibly, it does not claim accuracy on every real network. A real recording can be scored the same way by placing a `name.labels.json` file next to it.
+
+## Security score
+
+Each device starts at 100 and loses points only for problems NetLens actually observed (outdated TLS -40, broken ciphers -15, weak cipher negotiated -15, unencrypted data -20, port scan -25, ARP impersonation -35, heavy data use -10 per alert, capped). Grades: A >= 90, B >= 75, C >= 60, D >= 40, F below. There is no hidden weighting: the report prints the table of deductions, each finding comes with what to do, and the limits are stated (it grades only what a passive observer can see; it is not a vulnerability scan).
 
 ## Architecture
 
@@ -73,7 +95,7 @@ web/          stdlib-only HTTP server + static single-page dashboard (no CDN, wo
 Data path: `capture -> decode -> flow tracker -> SQLite -> baseline -> detection -> signed ledger -> UI`.
 
 ### Detection rules (SRS REQ-25 to REQ-30)
-- **bandwidth_hog** - window bytes > 3x the host's own baseline, baseline meaningful (> 1 KB/s) and the host moved at least 15 KB/s.
+- **bandwidth_hog** - window bytes > 3x the host's own baseline, baseline meaningful (> 1 KB/s) and the host moved at least 40 KB/s (all of these were chosen with the Tuning Lab, see below).
 - **port_scan** - distinct destination ports in connection-opening packets >= max(15, 3x baseline). Only SYNs / UDP-to-service-port packets count, so a DNS server answering many clients is *not* a scanner.
 - **arp_spoof** - one IP seen with a second MAC; the original binding stays trusted so a sustained spoof keeps firing.
 - No alert until a host has 3 learned windows; a window that alerts is *not* learned from; identical alerts inside 12 s are counted, not repeated.
@@ -86,7 +108,7 @@ Data path: `capture -> decode -> flow tracker -> SQLite -> baseline -> detection
 - A TLS hello split across TCP segments is not reassembled; QUIC and encrypted DNS (DoH / Private Relay) hide names - those flows fall back to organisation-level labels.
 - The IP-range and MAC-vendor tables are small, hand-curated, and offline by design.
 - ARP spoofing can't be staged safely against a real phone; it is demonstrated in Simulation (and fires live if a second device really claims the gateway IP).
-- Thresholds (3x, 15 ports, 15 KB/s) are tuned defaults, listed as TBD items in the SRS.
+- Thresholds (3x, 15 ports, 40 KB/s) were chosen from measurements on a labelled synthetic benchmark (Tuning Lab); they are defaults, not universal truths.
 
 ## Tests
 ```

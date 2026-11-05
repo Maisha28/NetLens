@@ -23,8 +23,12 @@ function niceMax(v) {
   if (v <= 0) return 1;
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;
-  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((c) => n <= c + 1e-9);
+  return step * p;
 }
+
+/** Axis maximum for small whole-number counts: a multiple of 4 so every gridline lands on an integer. */
+function countMax(v) { return v <= 20 ? Math.max(4, Math.ceil(v / 4) * 4) : niceMax(v); }
 
 /* ------------------------------------------------------ throughput (one series) */
 const Throughput = {
