@@ -190,3 +190,35 @@ html[data-theme="light"] .aurora i { opacity: .28; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+
+/* ------------------------------------------------------- ambient polish */
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+/* headline: words blur in one after another */
+.hero h1 .w { display: inline-block; opacity: 0; filter: blur(10px); transform: translateY(.45em); transition: opacity .8s cubic-bezier(.2, .8, .2, 1), filter .8s cubic-bezier(.2, .8, .2, 1), transform .8s cubic-bezier(.2, .8, .2, 1); }
+.hero h1.in .w { opacity: 1; filter: none; transform: none; transition-delay: calc(var(--i) * 80ms + .15s); }
+.hero h1 .grad { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: inherit; }
+.hero h1 .grad .w { background: linear-gradient(100deg, var(--accent-2), var(--accent) 55%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* the cursor carries a soft spotlight across the hero */
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(520px circle at var(--sx, 30%) var(--sy, 40%), rgba(91, 140, 255, .16), transparent 62%); transition: background .15s; }
+html[data-theme="light"] .hero::after { background: radial-gradient(520px circle at var(--sx, 30%) var(--sy, 40%), rgba(36, 86, 216, .10), transparent 62%); }
+
+/* ribbon of what NetLens decodes */
+.marquee { position: relative; overflow: hidden; border-block: 1px solid var(--card-b); background: var(--card); padding: 17px 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); }
+.marquee .track { display: flex; gap: 42px; width: max-content; animation: scrollx 46s linear infinite; }
+.marquee:hover .track { animation-play-state: paused; }
+.marquee span { display: flex; align-items: center; gap: 42px; font: 600 15px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .5px; color: var(--muted); white-space: nowrap; }
+.marquee span::after { content: "◆"; color: var(--accent-2); font-size: 10px; }
+@keyframes scrollx { to { transform: translateX(-50%); } }
+
+/* buttons lean toward the cursor; the closing call to action glows with a rotating halo */
+.btn.magnet { transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s, background .2s; will-change: transform; }
+.final .btn.primary { position: relative; isolation: isolate; }
+.final .btn.primary::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; z-index: -1; background: conic-gradient(from var(--ang), #35e0c0, #5b8cff, #a78bfa, #ff6b7d, #35e0c0); filter: blur(14px); opacity: .75; animation: spinang 5s linear infinite; }
+@keyframes spinang { to { --ang: 360deg; } }
+
+/* table rows slide in one by one */
+.crow.reveal { transform: translateX(-26px); }
+.crow.reveal.in { transform: none; }

@@ -184,3 +184,55 @@
   requestAnimationFrame(frame);
   if (reduce) requestAnimationFrame(frame);
 })();
+
+
+/* ---------------------------------------------------------------- ambient polish */
+(function () {
+  "use strict";
+  const $ = (q, r = document) => r.querySelector(q);
+  const $$ = (q, r = document) => [...r.querySelectorAll(q)];
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // headline: split into words so they can blur in one after another
+  const h1 = $(".hero h1");
+  if (h1) {
+    let i = 0;
+    const wrap = (node) => [...node.childNodes].forEach((n) => {
+      if (n.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        n.textContent.split(/(\s+)/).forEach((t) => {
+          if (!t.trim()) { frag.append(t); return; }
+          const s = document.createElement("span"); s.className = "w"; s.style.setProperty("--i", i++); s.textContent = t; frag.append(s);
+        });
+        n.replaceWith(frag);
+      } else if (n.nodeType === 1 && n.tagName !== "BR") wrap(n);
+    });
+    wrap(h1);
+  }
+
+  // cursor spotlight + gentle parallax on the hero
+  const hero = $(".hero");
+  if (hero && !reduce) {
+    hero.addEventListener("mousemove", (e) => {
+      const r = hero.getBoundingClientRect();
+      hero.style.setProperty("--sx", e.clientX - r.left + "px"); hero.style.setProperty("--sy", e.clientY - r.top + "px");
+    });
+    const aur = $(".hero .aurora");
+    addEventListener("scroll", () => { if (aur && scrollY < innerHeight * 1.2) aur.style.transform = `translateY(${scrollY * 0.22}px)`; }, { passive: true });
+  }
+
+  // magnetic buttons
+  if (!reduce) $$(".btn.primary").forEach((b) => {
+    b.classList.add("magnet");
+    b.addEventListener("mousemove", (e) => {
+      const r = b.getBoundingClientRect();
+      b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.18}px, ${(e.clientY - r.top - r.height / 2) * 0.28}px)`;
+    });
+    b.addEventListener("mouseleave", () => { b.style.transform = ""; });
+  });
+
+  // comparison rows reveal one by one
+  const rows = $$(".crow:not(.head)");
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.2 });
+  rows.forEach((r, i) => { r.classList.add("reveal"); r.style.transitionDelay = i * 70 + "ms"; io.observe(r); });
+})();
