@@ -35,7 +35,9 @@ from decoder.explain import explain_frame
 from detection.rules import Alert, ArpWatcher, check_bandwidth_hog, check_port_scan
 from enrichment.enrichment import resolve_org
 from enrichment.hostnames import HostnameMap
+from engine.params import DEFAULT_PARAMS, EngineParams
 from enrichment.oui import is_randomized, vendor
+from security.score import LIMITS, assess_device, methodology, summarise
 from shared.packet_record import PacketRecord
 from storage.db import get_connection, store_alert, store_flows, store_packet, upsert_baseline
 from storage.flow_tracker import FlowKey, FlowStats, bump_flow
@@ -44,7 +46,6 @@ PACKET_RING = 1500
 RAW_RING = 5000
 MAX_CONVS = 3000
 HISTORY_POINTS = 90
-ALERT_COOLDOWN_SECONDS = 12.0
 
 POSTURE_LABELS = {
     "tls13": "TLS 1.3",
@@ -101,6 +102,7 @@ class HostState:
     sites: Counter = field(default_factory=Counter)
     history: Deque[dict] = field(default_factory=lambda: deque(maxlen=HISTORY_POINTS))
     last_alert_at: float = 0.0
+    posture_bytes: Counter = field(default_factory=Counter)  # bytes by encryption class, for the security score
 
 
 @dataclass
@@ -127,7 +129,14 @@ class Engine:
         time_source: str = "wall",
         key_path: Optional[Path] = None,
         fresh: bool = True,
+        params: Optional[EngineParams] = None,
+        lite: bool = False,
     ) -> None:
+        # lite=True is for offline replays (the Tuning Lab): skip everything the
+        # detectors don't need - the SQLite writes, the UI feed, TLS and
+        # conversation bookkeeping - so one recording can be replayed many times.
+        self.params = params or DEFAULT_PARAMS
+        self.lite = lite
         self.window_seconds = window_seconds
         self.time_source = time_source
         self.lock = threading.RLock()
@@ -156,7 +165,7 @@ class Engine:
     def _init_state(self) -> None:
         self.started_at = time.time()
         self.hostnames = HostnameMap()
-        self.tracker = BaselineTracker()
+        self.tracker = BaselineTracker(min_samples=self.params.min_windows)
         self.arp = ArpWatcher()
         self.flows: Dict[FlowKey, FlowStats] = {}
         self.convs: Dict[tuple, Conversation] = {}
@@ -301,6 +310,11 @@ class Engine:
                     self._window_end = record.timestamp + self.window_seconds
 
             self.seq += 1
+            if self.lite:
+                self.window_bytes_total += record.length
+                self._track_hosts(record)
+                self._check_arp(record)
+                return
             self.hostnames.learn(record)
             store_packet(record, self.conn, commit=False)
             self.counters["packets_stored"] += 1
@@ -314,8 +328,8 @@ class Engine:
 
             self.last_host = record.src_ip if is_local(record.src_ip) else record.dst_ip
             self._account_traffic(record)
-            self._track_conversation(record)
             self._track_hosts(record)
+            self._track_conversation(record)
             self._track_tls(record)
             self._check_arp(record)
             self._append_feed(record)
@@ -396,6 +410,10 @@ class Engine:
             # listening, so the version is unknown - but the port says TLS.
             conv.posture = "tls_unseen"
         self.posture_bytes[conv.posture] += record.length
+        for endpoint_ip in (record.src_ip, record.dst_ip):
+            local_host = self.hosts.get(endpoint_ip)
+            if local_host is not None:
+                local_host.posture_bytes[conv.posture] += record.length
         if record.tls_sni:
             conv.sni = record.tls_sni
 
@@ -442,7 +460,8 @@ class Engine:
             stats = self.interval.setdefault(ip, IntervalStats())
             stats.byte_count += record.length
             stats.packet_count += 1
-            if ip == record.src_ip and is_probe(record):
+            counts_as_port = is_probe(record) if self.params.probe_only else record.dst_port is not None
+            if ip == record.src_ip and counts_as_port:
                 stats.distinct_dst_ports.add(record.dst_port)
                 if record.dst_ip:
                     stats.distinct_dst_ips.add(record.dst_ip)
@@ -573,10 +592,14 @@ class Engine:
             fired: List[Alert] = []
             # The floor scales with the window so a quiet host (e.g. a gateway
             # that only answers DNS) doesn't trip the rule on a handful of packets.
-            # Likewise it must move a meaningful amount (>= 15 KB/s): an idle phone's
-            # background beacon is 3x its near-zero baseline but is not a hog.
+            # Likewise it must move a meaningful amount (default 40 KB/s, chosen from the
+            # Tuning Lab's plateau): an idle phone's beacon is 3x its near-zero baseline
+            # but is not a hog.
+            p = self.params
             hogs = check_bandwidth_hog(
-                stats, self.tracker, min_baseline_bytes=1000.0 * window, min_observed_bytes=15000.0 * window
+                stats, self.tracker, multiplier=p.hog_multiplier,
+                min_baseline_bytes=p.hog_min_baseline_per_s * window,
+                min_observed_bytes=p.hog_min_observed_per_s * window,
             )
             for alert in hogs:
                 share = (alert.observed_value / self.window_bytes_total * 100) if self.window_bytes_total else 0.0
@@ -588,7 +611,9 @@ class Engine:
                     "share_of_window_total_pct": round(share, 1), "window_seconds": window,
                 }
             fired += hogs
-            fired += check_port_scan(stats, self.tracker, window_seconds=window)
+            fired += check_port_scan(
+                stats, self.tracker, min_ports=p.scan_min_ports, multiplier=p.scan_multiplier, window_seconds=window
+            )
 
             for alert in fired:
                 alert.timestamp = now
@@ -613,9 +638,10 @@ class Engine:
                         "ready": ready, "alert": ip in alerted_hosts,
                     }
                 )
-                if ip in stats and ip not in alerted_hosts:
-                    self.tracker.update(ip, st, now)
-                    upsert_baseline(self.tracker.get_baseline(ip), self.conn)
+                if ip in stats and not (p.skip_alert_baseline and ip in alerted_hosts):
+                    self.tracker.update(ip, st, now, alpha=p.alpha)
+                    if not self.lite:
+                        upsert_baseline(self.tracker.get_baseline(ip), self.conn)
 
             self.window_log.append(
                 {"t": now, "hosts": len(stats), "bytes": self.window_bytes_total, "alerts": len(emitted)}
@@ -623,25 +649,30 @@ class Engine:
             self.interval = {}
             self.window_bytes_total = 0
             self.window_start = now
-            store_flows(self.flows, self.conn)
-            self.conn.commit()
+            if not self.lite:
+                store_flows(self.flows, self.conn)
+                self.conn.commit()
             return emitted
 
     def _emit(self, alert: Alert, now: float) -> Optional[dict]:
         key = (alert.rule_name, alert.host)
         last = self._cooldown.get(key)
-        if last and now - last["t"] < ALERT_COOLDOWN_SECONDS:
+        if last and self.params.cooldown > 0 and now - last["t"] < self.params.cooldown:
             last["alert"]["repeats"] = last["alert"].get("repeats", 0) + 1
             last["alert"]["last_seen"] = now
             return None
 
-        store_alert(alert, self.conn)
+        if not self.lite:
+            store_alert(alert, self.conn)
         payload = {
             "rule": alert.rule_name, "host": alert.host, "observed": round(alert.observed_value, 3),
             "baseline": round(alert.baseline_value, 3), "threshold": round(alert.threshold_multiplier, 3),
             "message": alert.message, "severity": alert.severity, "evidence": alert.evidence, "ts": alert.timestamp,
         }
-        seal = self.ledger.append(payload, alert.timestamp)
+        seal = (
+            {"idx": -1, "entry_hash": "", "signature": ""} if self.lite
+            else self.ledger.append(payload, alert.timestamp)
+        )
         self.counters["ledger_sealed"] += 1
         self.counters["alerts"] += 1
         host = self.hosts.get(alert.host)
@@ -831,6 +862,30 @@ class Engine:
             "baseline": None if base is None else {"bytes": round(base.ewma_bytes, 1), "samples": base.samples_seen},
         }
 
+    def security_report(self) -> dict:
+        """Per-device security grades (A-F) with every deduction explained, plus the method and its limits."""
+        with self.lock:
+            self_ips = set(self.meta.get("self_ips") or [])
+            devices = []
+            for ip in sorted(self.hosts, key=lambda s: tuple(int(p) for p in s.split("."))):
+                h = self.hosts[ip]
+                devices.append(
+                    assess_device(
+                        ip=ip, mac=h.mac, vendor=vendor(h.mac), randomized_mac=is_randomized(h.mac),
+                        packets=h.packets, bytes_total=h.bytes,
+                        findings=[f for f in self.findings.values() if f["host"] == ip],
+                        tls_rows=[r for r in self.tls_rows.values() if r["client"] == ip],
+                        alerts=self.alerts, posture_bytes=dict(h.posture_bytes),
+                        is_self=ip in self_ips or ip.endswith(".137.1"),
+                    )
+                )
+            return {
+                "generated_at": time.time(), "mode": self.mode, "label": self.meta.get("label") or "",
+                "uptime": max(0.0, time.time() - self.started_at), "window_seconds": self.window_seconds,
+                "devices": devices, "overall": summarise(devices),
+                "methodology": methodology(), "limits": LIMITS,
+            }
+
     def report(self) -> dict:
         """Evidence bundle for download: alerts, verified ledger, hosts, crypto findings."""
         snap = self.snapshot()
@@ -842,6 +897,7 @@ class Engine:
                        "entries": self.ledger.entries(500)},
             "hosts": [{k: v for k, v in h.items() if k != "history"} for h in snap["hosts"]],
             "crypto_findings": snap["findings"],
+            "security": self.security_report(),
             "note": "Metadata only: addresses, ports, timing, sizes and cleartext handshake fields. No payload content.",
         }
 

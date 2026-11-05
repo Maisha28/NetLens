@@ -17,6 +17,8 @@ demo day" rule applies to the front end too).
     GET  /api/system             Administrator / Npcap / hotspot-adapter checks + saved recordings
     POST /api/source  (modes)    live | sim | pcap | stop  - switching always starts from a clean slate
     GET  /api/report             downloadable JSON evidence bundle
+    GET  /api/security           per-device security grades (A-F) with every deduction explained
+
 """
 
 from __future__ import annotations
@@ -213,6 +215,8 @@ def make_handler(app: App):
                         {"entries": app.engine.ledger.entries(120), "verification": app.engine.ledger.verify(),
                          "count": app.engine.ledger.count}
                     )
+                if path == "/api/security":
+                    return self._json(app.engine.security_report())
                 if path == "/api/system":
                     return self._json({**system.system_check(), "recordings": app.recordings(),
                                        "mode": app.engine.mode, "meta": app.engine.meta})

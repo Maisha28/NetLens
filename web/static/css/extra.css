@@ -1,0 +1,80 @@
+/* Security score, Tuning lab and print layout. */
+
+/* ----------------------------------------------------------- grade badges */
+.gradebig { width: 96px; height: 96px; border-radius: 26px; display: grid; place-items: center; font-size: 56px; font-weight: 800; flex: none; line-height: 1; }
+.gradebig.sm { width: 60px; height: 60px; border-radius: 16px; font-size: 32px; }
+.gradebig.A { background: var(--ok-soft); color: var(--ok); }
+.gradebig.B { background: #e0f4f1; color: var(--accent-2); }
+.gradebig.C { background: var(--warn-soft); color: var(--warn); }
+.gradebig.D { background: #ffedd5; color: #c2410c; }
+.gradebig.F { background: #fbe3ea; color: var(--critical); }
+.gradebig.Q, .gradebig.N { background: var(--surface-3); color: var(--faint); }
+.overall { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+
+.sc-dev { gap: 16px; }
+.deducts { display: grid; gap: 14px; }
+.deduct { display: grid; grid-template-columns: 58px 1fr; gap: 14px; align-items: start; }
+.deduct .pts { display: grid; place-items: center; height: 34px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); font-weight: 800; font-size: 16px; }
+.deduct b { font-size: 17px; }
+.deduct .muted { font-size: 15.5px; }
+.advice { margin-top: 6px; font-size: 15px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 8px 12px; color: #33425f; }
+.goods { display: grid; gap: 6px; color: var(--ok); font-size: 15.5px; }
+.goods > div { display: flex; gap: 8px; align-items: baseline; }
+.print-only { display: none; }
+.rep-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 14px; }
+.rep-head h1 { margin: 0; font-size: 28px; }
+.rep-mark { width: 44px; height: 44px; color: var(--accent); }
+.rep-mark svg { width: 44px; height: 44px; }
+
+/* ------------------------------------------------------------ tuning lab */
+.stepnum { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; margin-right: 12px; font-size: 17px; }
+.runbar { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.runbar .progress { flex: 1; }
+.card .hero { padding: 22px 26px; }
+.card .hero h2 { font-size: 26px; }
+.card .hero p { font-size: 17px; }
+
+/* ------------------------------------------------------------------ print */
+@media print {
+  @page { size: A4; margin: 11mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; font-size: 12px; }
+  .app { display: block !important; height: auto !important; }
+  .sidebar, .topbar, #bannerSlot, .toasts, .flash, .tip, .guide, .no-print, .overlay { display: none !important; }
+  .main { display: block !important; height: auto !important; }
+  .view { overflow: visible !important; padding: 0 !important; }
+  .view > * { max-width: none !important; margin-top: 12px; }
+  .print-only { display: block !important; }
+  .card { box-shadow: none !important; border: 1px solid #cfd7e3 !important; padding: 11px 14px !important; break-inside: avoid; }
+  .card-head h2 { font-size: 15px !important; }
+  .rep-head h1 { font-size: 22px; }
+  .overall { gap: 16px; }
+  .gradebig { width: 64px; height: 64px; font-size: 38px; border-radius: 16px; }
+  .gradebig.sm { width: 42px; height: 42px; font-size: 24px; border-radius: 11px; }
+  #sc-devices { display: block !important; column-count: 2; column-gap: 10px; }
+  .sc-dev { gap: 7px !important; break-inside: avoid; margin: 0 0 10px; }
+  .sc-dev.na { display: none !important; }
+  #sc-method { break-before: page; }
+  #sc-method .lead { display: none; }
+  .deducts { gap: 7px !important; }
+  .advice { padding: 4px 8px !important; margin-top: 3px !important; font-size: 10px !important; }
+  .goods { gap: 2px !important; }
+  .sc-dev .device-head { gap: 10px !important; }
+  .sc-dev .mono { font-size: 11px !important; }
+  .overall { padding: 10px 14px !important; }
+  .rep-head { margin-bottom: 8px !important; padding-bottom: 6px !important; }
+  #sc-method .card-head { margin-bottom: 6px; }
+  #sc-method table.t { font-size: 10px; }
+  #sc-method table.t th, #sc-method table.t td { padding: 2px 8px; }
+  #sc-method .muted { font-size: 10px; }
+  .view > * { margin-top: 9px !important; }
+  .dev-name { font-size: 14.5px !important; }
+  .deduct { font-size: 11.5px; grid-template-columns: 40px 1fr; gap: 8px; }
+  .deduct b { font-size: 12.5px; }
+  .deduct .pts { height: 24px; font-size: 12px; }
+  .deduct .muted, .advice { font-size: 10.5px !important; }
+  .goods { font-size: 11px; }
+  table.t { font-size: 11px; }
+  table.t th, table.t td { padding: 4px 8px; }
+  .progress { height: 7px; }
+}

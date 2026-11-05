@@ -37,8 +37,9 @@ class HostBaseline:
 
 
 class BaselineTracker:
-    def __init__(self) -> None:
+    def __init__(self, min_samples: int = 3) -> None:
         self._baselines: Dict[str, HostBaseline] = {}
+        self.min_samples = min_samples
 
     def update(self, host: str, stats: IntervalStats, now: float, alpha: float = 0.2) -> None:
         observed_ports = float(len(stats.distinct_dst_ports))
@@ -63,9 +64,10 @@ class BaselineTracker:
         existing.samples_seen += 1
         existing.last_updated = now
 
-    def is_baseline_ready(self, host: str, min_samples: int = 3) -> bool:
+    def is_baseline_ready(self, host: str, min_samples: Optional[int] = None) -> bool:
+        needed = self.min_samples if min_samples is None else min_samples
         baseline = self._baselines.get(host)
-        return baseline is not None and baseline.samples_seen >= min_samples
+        return baseline is not None and baseline.samples_seen >= needed
 
     def get_baseline(self, host: str) -> Optional[HostBaseline]:
         return self._baselines.get(host)
