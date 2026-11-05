@@ -17,7 +17,7 @@
 .deduct .pts { display: grid; place-items: center; height: 34px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); font-weight: 800; font-size: 16px; }
 .deduct b { font-size: 17px; }
 .deduct .muted { font-size: 15.5px; }
-.advice { margin-top: 6px; font-size: 15px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 8px 12px; color: #33425f; }
+.advice { margin-top: 6px; font-size: 15px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 8px 12px; color: var(--text-2); }
 .goods { display: grid; gap: 6px; color: var(--ok); font-size: 15.5px; }
 .goods > div { display: flex; gap: 8px; align-items: baseline; }
 .print-only { display: none; }

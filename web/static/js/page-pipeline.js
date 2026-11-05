@@ -73,7 +73,7 @@ PAGES.pipeline = {
     $("#pp-detail").innerHTML = `<div class="card-head"><h2>Stage: ${st.name}</h2><span class="tag">${st.file}</span></div>
       <div style="font-size:14px;line-height:1.6">${st.what}</div>
       <div class="row" style="margin-top:12px;gap:8px"><span class="badge info">${st.inout}</span><span class="tag">SRS ${st.req}</span></div>
-      <div style="margin-top:14px;padding:12px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;font-style:italic;color:#33425f;font-size:16px">${st.say}</div>`;
+      <div style="margin-top:14px;padding:12px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;font-style:italic;color:var(--text-2);font-size:16px">${st.say}</div>`;
 
     const dst = S.hosts.length ? S.hosts.find((h) => h.ip === tr.host) : null;
     const base = tr.baseline;

@@ -39,12 +39,20 @@ PAGES.overview = {
     const devices = S.hosts.filter((h) => !Names.isSelf(h.ip, S));
     const sites = new Map();
     for (const h of S.hosts) for (const [k, v] of h.top_sites || []) sites.set(k, (sites.get(k) || 0) + v);
-    const tile = (num, lbl, sub) => `<div class="tile"><div class="num">${num}</div><div class="lbl">${lbl}</div><div class="sub">${sub}</div></div>`;
-    $("#hm-tiles").innerHTML =
-      tile(devices.length, "Devices connected", devices.length ? devices.map((d) => Names.name(d, S)).slice(0, 2).join(", ") : "none yet") +
-      tile(sites.size, "Websites &amp; apps seen", sites.size ? [...sites.keys()].slice(0, 3).join(", ") : "none yet") +
-      tile(fmt.bytes(S.totals.bytes), "Data observed", `${fmt.rate(S.totals.bps)} right now`) +
-      tile(S.totals.alerts, "Security alerts", S.totals.alerts ? "see the Alerts page" : "none so far");
+    const tiles = [
+      [devices.length, "Devices connected", devices.length ? devices.map((d) => Names.name(d, S)).slice(0, 2).join(", ") : "none yet"],
+      [sites.size, "Websites &amp; apps seen", sites.size ? [...sites.keys()].slice(0, 3).join(", ") : "none yet"],
+      [fmt.bytes(S.totals.bytes), "Data observed", `${fmt.rate(S.totals.bps)} right now`],
+      [S.totals.alerts, "Security alerts", S.totals.alerts ? "see the Alerts page" : "none so far"],
+    ];
+    const box = $("#hm-tiles");
+    if (box.children.length !== tiles.length) box.innerHTML = tiles.map(() => `<div class="tile"><div class="num"></div><div class="lbl"></div><div class="sub"></div></div>`).join("");
+    tiles.forEach(([num, lbl, sub], i) => {   // tiles persist between updates so their numbers can count up smoothly
+      const t = box.children[i];
+      tweenNumber(t.children[0], num);
+      t.children[1].innerHTML = lbl;
+      t.children[2].textContent = sub;
+    });
 
     // activity log (built in app.js from state changes)
     const ev = Events.list.slice(0, 5);

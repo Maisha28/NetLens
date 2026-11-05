@@ -1,7 +1,6 @@
 /* Hand-drawn charts (canvas / SVG) for the light theme. No libraries, nothing fetched at demo time. */
 "use strict";
 
-const INK = "#172033", SUB = "#55627a", GRIDC = "#e6ebf3";
 const SANS = () => getComputedStyle(document.body).getPropertyValue("--sans") || "sans-serif";
 const MONO = () => getComputedStyle(document.body).getPropertyValue("--mono") || "monospace";
 
@@ -48,10 +47,10 @@ const Throughput = {
     ctx.font = `13.5px ${SANS()}`; ctx.lineWidth = 1;
     for (let g = 0; g <= 3; g++) {
       const v = (max * g) / 3, yy = y(v);
-      ctx.strokeStyle = GRIDC; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
-      ctx.fillStyle = SUB; ctx.textAlign = "right"; ctx.fillText(fmt.rate(v), padL - 10, yy + 5);
+      ctx.strokeStyle = P().grid; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+      ctx.fillStyle = P().sub; ctx.textAlign = "right"; ctx.fillText(fmt.rate(v), padL - 10, yy + 5);
     }
-    ctx.textAlign = "center"; ctx.fillStyle = SUB;
+    ctx.textAlign = "center"; ctx.fillStyle = P().sub;
     for (const back of [120, 90, 60, 30, 0]) {
       const i = series.length - 1 - back;
       if (i >= 0) ctx.fillText(back === 0 ? "now" : `${back}s ago`, x(i), h - 8);
@@ -62,7 +61,7 @@ const Throughput = {
     ctx.beginPath(); sm.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));
     ctx.lineTo(x(sm.length - 1), y(0)); ctx.lineTo(x(0), y(0)); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
     ctx.beginPath(); sm.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));
-    ctx.strokeStyle = "#2456d8"; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.stroke();
+    ctx.strokeStyle = P().accent; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.stroke();
 
     const t0 = series[0][0], t1 = series[series.length - 1][0];
     for (const a of alerts || []) {
@@ -94,7 +93,7 @@ const HostChart = {
     const padL = 64, padR = 8, padT = 10, padB = 8;
     const cw = w - padL - padR, ch = h - padT - padB, mult = opts.mult || 3;
     if (!history.length) {
-      ctx.fillStyle = SUB; ctx.font = `15px ${SANS()}`; ctx.textAlign = "center";
+      ctx.fillStyle = P().sub; ctx.font = `15px ${SANS()}`; ctx.textAlign = "center";
       ctx.fillText("Collecting the first few seconds of data…", w / 2, h / 2); return;
     }
     const n = Math.max(history.length, 12), bw = cw / n;
@@ -104,12 +103,12 @@ const HostChart = {
     ctx.font = `12.5px ${SANS()}`; ctx.lineWidth = 1;
     for (let g = 0; g <= 2; g++) {
       const v = (max * g) / 2, yy = y(v);
-      ctx.strokeStyle = GRIDC; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
-      ctx.fillStyle = SUB; ctx.textAlign = "right"; ctx.fillText(fmt.bytes(v), padL - 8, yy + 4);
+      ctx.strokeStyle = P().grid; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+      ctx.fillStyle = P().sub; ctx.textAlign = "right"; ctx.fillText(fmt.bytes(v), padL - 8, yy + 4);
     }
     history.forEach((p, i) => {
       const x = padL + (n - history.length + i) * bw, top = y(p.bytes);
-      ctx.fillStyle = p.alert ? "#d03a3a" : p.ready ? "#7da2f0" : "#c5cedd";
+      ctx.fillStyle = p.alert ? "#d03a3a" : p.ready ? P().barReady : P().barIdle;
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x + 2, top, Math.max(3, bw - 4), padT + ch - top, 4); else ctx.rect(x + 2, top, Math.max(3, bw - 4), padT + ch - top);
       ctx.fill();
@@ -141,9 +140,9 @@ function donut(items, { size = 160, thickness = 26, center = "", sub = "" } = {}
     return seg;
   }).join("");
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#e9eef6" stroke-width="${thickness}"/>${arcs}
-    <text x="50%" y="${sub ? "49%" : "54%"}" text-anchor="middle" fill="${INK}" font-size="${size / 6}" font-weight="750">${esc(center)}</text>
-    ${sub ? `<text x="50%" y="65%" text-anchor="middle" fill="${SUB}" font-size="${size / 12}">${esc(sub)}</text>` : ""}
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${P().track}" stroke-width="${thickness}"/>${arcs}
+    <text x="50%" y="${sub ? "49%" : "54%"}" text-anchor="middle" fill="${P().ink}" font-size="${size / 6}" font-weight="750">${esc(center)}</text>
+    ${sub ? `<text x="50%" y="65%" text-anchor="middle" fill="${P().sub}" font-size="${size / 12}">${esc(sub)}</text>` : ""}
   </svg>`;
 }
 
@@ -157,19 +156,19 @@ const Raster = {
     ctx.font = `13px ${SANS()}`; ctx.textAlign = "center";
     for (let s = 0; s <= windowSec; s += 30) {
       const xx = x(now - windowSec + s);
-      ctx.strokeStyle = GRIDC; ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, h - 26); ctx.stroke();
-      ctx.fillStyle = SUB; ctx.fillText(s === windowSec ? "now" : `${windowSec - s}s ago`, xx, h - 8);
+      ctx.strokeStyle = P().grid; ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, h - 26); ctx.stroke();
+      ctx.fillStyle = P().sub; ctx.fillText(s === windowSec ? "now" : `${windowSec - s}s ago`, xx, h - 8);
     }
     rows.forEach((r, i) => {
       const yy = top + i * rowH + rowH / 2;
-      if (r.periodic) { ctx.fillStyle = "#e4f5ec"; ctx.fillRect(0, yy - rowH / 2, w, rowH); }
-      ctx.textAlign = "left"; ctx.fillStyle = r.periodic ? INK : SUB; ctx.font = `${r.periodic ? "600 " : ""}15px ${SANS()}`;
+      if (r.periodic) { ctx.fillStyle = P().okSoft; ctx.fillRect(0, yy - rowH / 2, w, rowH); }
+      ctx.textAlign = "left"; ctx.fillStyle = r.periodic ? P().ink : P().sub; ctx.font = `${r.periodic ? "600 " : ""}15px ${SANS()}`;
       const name = r.site || r.org || r.dst;
       ctx.fillText((name.length > 20 ? name.slice(0, 19) + "…" : name), 10, yy + 5);
       for (const t of r.events) {
         if (t < now - windowSec) continue;
         ctx.beginPath(); ctx.arc(x(t), yy, 7, 0, Math.PI * 2);
-        ctx.fillStyle = r.periodic ? "#138a55" : "#9bb4ec"; ctx.fill();
+        ctx.fillStyle = r.periodic ? "#138a55" : P().dotIdle; ctx.fill();
       }
     });
   },
@@ -248,7 +247,7 @@ class Topology {
     const { ctx, w, h } = prepCanvas(this.canvas, this.canvas._h || 380);
     this.layout();
     const t = now / 1000;
-    ctx.font = `600 12.5px ${SANS()}`; ctx.fillStyle = "#98a3b8"; ctx.textAlign = "center";
+    ctx.font = `600 12.5px ${SANS()}`; ctx.fillStyle = P().cap; ctx.textAlign = "center";
     ctx.fillText("YOUR DEVICES", Math.max(110, w * 0.13), 18);
     ctx.fillText("CAPTURE POINT", w * 0.47, 18);
     ctx.fillText("THE INTERNET", w - Math.max(100, w * 0.13), 18);
@@ -256,7 +255,7 @@ class Topology {
     for (const l of this.links) {
       const a = this.nodes.get(l.a), b = this.nodes.get(l.b);
       if (!a || !b) continue;
-      ctx.strokeStyle = l.kind === "lan" ? "#b7c9f2" : "#c9d3e6"; ctx.lineWidth = 1.5 + l.w * 4;
+      ctx.strokeStyle = l.kind === "lan" ? P().lan : P().wan; ctx.lineWidth = 1.5 + l.w * 4;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       if (Math.random() < 0.03 + l.w * 0.1) this.particles.push({ l, p: 0, v: 0.5 + Math.random() * 0.5, back: Math.random() < 0.35 });
     }
@@ -266,7 +265,7 @@ class Topology {
       if (!a || !b) continue;
       const p = q.back ? 1 - q.p : q.p;
       ctx.beginPath(); ctx.arc(a.x + (b.x - a.x) * p, a.y + (b.y - a.y) * p, 4, 0, Math.PI * 2);
-      ctx.fillStyle = q.l.kind === "lan" ? "#2456d8" : "#0f8f84"; ctx.fill();
+      ctx.fillStyle = q.l.kind === "lan" ? P().accent : "#0f8f84"; ctx.fill();
     }
     for (const n of this.nodes.values()) this.drawNode(ctx, n, t);
     requestAnimationFrame(this.loop);
@@ -278,15 +277,15 @@ class Topology {
       const text = n.label.length > 17 ? n.label.slice(0, 16) + "…" : n.label;
       ctx.font = `600 15px ${SANS()}`;
       const w = ctx.measureText(text).width + 30;
-      ctx.fillStyle = hovered ? "#e8eefc" : "#fff"; ctx.strokeStyle = hovered ? "#2456d8" : "#cdd6e3"; ctx.lineWidth = 1.6;
+      ctx.fillStyle = hovered ? P().orgHover : P().surface; ctx.strokeStyle = hovered ? P().accent : P().orgLine; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.roundRect(n.x - w / 2, n.y - 19, w, 38, 19); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.fillText(text, n.x, n.y + 5);
+      ctx.fillStyle = P().ink; ctx.textAlign = "center"; ctx.fillText(text, n.x, n.y + 5);
       return;
     }
     const isSelf = n.kind === "self", rad = isSelf ? 34 : 28;
-    const color = isSelf ? "#0f8f84" : n.alert ? "#d03a3a" : "#2456d8";
+    const color = isSelf ? "#0f8f84" : n.alert ? "#d03a3a" : P().accent;
     if (n.alert) { ctx.strokeStyle = `rgba(208,58,58,${0.3 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(n.x, n.y, rad + 9, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(n.x, n.y, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = P().surface; ctx.beginPath(); ctx.arc(n.x, n.y, rad, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = color; ctx.lineWidth = hovered ? 5 : 3.5; ctx.stroke();
     ctx.save(); ctx.translate(n.x, n.y); ctx.strokeStyle = color; ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round";
     const icon = isSelf ? "laptop" : n.icon;
@@ -294,8 +293,8 @@ class Topology {
     else if (icon === "chip") { ctx.strokeRect(-8, -8, 16, 16); ctx.beginPath(); for (const d of [-3.5, 3.5]) { ctx.moveTo(d, -13); ctx.lineTo(d, -8); ctx.moveTo(d, 8); ctx.lineTo(d, 13); ctx.moveTo(-13, d); ctx.lineTo(-8, d); ctx.moveTo(8, d); ctx.lineTo(13, d); } ctx.stroke(); }
     else { ctx.strokeRect(-13, -9, 26, 16); ctx.beginPath(); ctx.moveTo(-16, 12); ctx.lineTo(16, 12); ctx.stroke(); }
     ctx.restore();
-    ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.font = `600 15.5px ${SANS()}`;
+    ctx.textAlign = "center"; ctx.fillStyle = P().ink; ctx.font = `600 15.5px ${SANS()}`;
     ctx.fillText(n.label.length > 22 ? n.label.slice(0, 21) + "…" : n.label, n.x, n.y + rad + 20);
-    ctx.fillStyle = "#7a869c"; ctx.font = `13px ${MONO()}`; ctx.fillText(n.sub || "", n.x, n.y + rad + 37);
+    ctx.fillStyle = P().faint; ctx.font = `13px ${MONO()}`; ctx.fillText(n.sub || "", n.x, n.y + rad + 37);
   }
 }

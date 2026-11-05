@@ -1,0 +1,95 @@
+/* NetLens dashboard - dark theme. Applied with <html data-theme="dark">.
+   Screen only: printed reports always stay light so they are readable on paper. */
+
+:root { --text-2: #33425f; }
+
+@media screen {
+html[data-theme="dark"] {
+  --bg: #090f1d;
+  --bg-2: #0d1526;
+  --surface: #121b2f;
+  --surface-2: #17223a;
+  --surface-3: #1f2c4a;
+  --border: #243453;
+  --border-2: #34486f;
+  --text: #e8eefb;
+  --text-2: #c3d0ea;
+  --muted: #9db0d2;
+  --faint: #6f84ab;
+  --accent: #6b97ff;
+  --accent-soft: rgba(107, 151, 255, .15);
+  --accent-2: #35d6bb;
+  --violet: #a78bfa;
+  --ok: #3ecf8e;
+  --ok-soft: rgba(62, 207, 142, .14);
+  --warn: #f2a93b;
+  --warn-soft: rgba(242, 169, 59, .14);
+  --danger: #ff6b7d;
+  --danger-soft: rgba(255, 107, 125, .14);
+  --critical: #ff5c8a;
+  --tcp: #6b97ff; --udp: #a78bfa; --arp: #f2a93b; --icmp: #3ecf8e; --other: #7f90b3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 12px 34px -14px rgba(0, 0, 0, .7);
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] body { background: radial-gradient(1100px 520px at 85% -8%, rgba(91, 140, 255, .09), transparent 60%), var(--bg); }
+html[data-theme="dark"] ::selection { background: rgba(107, 151, 255, .4); }
+
+/* --- soft tints, borders and text colours that were hard-coded for the light theme --- */
+html[data-theme="dark"] .badge.ok { border-color: rgba(62, 207, 142, .38); }
+html[data-theme="dark"] .badge.warn { border-color: rgba(242, 169, 59, .4); }
+html[data-theme="dark"] .badge.bad { border-color: rgba(255, 107, 125, .42); }
+html[data-theme="dark"] .badge.crit { background: rgba(255, 92, 138, .16); color: #ff8fb0; border-color: rgba(255, 92, 138, .45); }
+html[data-theme="dark"] .badge.info { border-color: rgba(107, 151, 255, .4); }
+html[data-theme="dark"] .badge.violet { background: rgba(167, 139, 250, .16); border-color: rgba(167, 139, 250, .4); color: #c4b2ff; }
+html[data-theme="dark"] .source-badge.live { border-color: rgba(62, 207, 142, .4); }
+html[data-theme="dark"] .source-badge.sim { border-color: rgba(242, 169, 59, .45); }
+html[data-theme="dark"] .source-badge.pcap { border-color: rgba(107, 151, 255, .45); }
+html[data-theme="dark"] .proto.TCP { background: rgba(107, 151, 255, .16); }
+html[data-theme="dark"] .proto.UDP { background: rgba(167, 139, 250, .16); }
+html[data-theme="dark"] .grade.B { background: rgba(53, 214, 187, .15); }
+html[data-theme="dark"] .grade.F, html[data-theme="dark"] .gradebig.F { background: rgba(255, 92, 138, .16); }
+html[data-theme="dark"] .gradebig.B { background: rgba(53, 214, 187, .15); }
+html[data-theme="dark"] .gradebig.D { background: rgba(251, 146, 60, .16); color: #fdba74; }
+
+html[data-theme="dark"] .guide { background: linear-gradient(135deg, rgba(107, 151, 255, .12), rgba(53, 214, 187, .07)); border-color: rgba(107, 151, 255, .3); }
+html[data-theme="dark"] .guide .ico { background: var(--surface-3); }
+html[data-theme="dark"] .guide p { color: var(--text-2); }
+
+html[data-theme="dark"] .banner.err { color: #ffb3bd; border-color: rgba(255, 107, 125, .4); }
+html[data-theme="dark"] .banner.warn { color: #ffd199; border-color: rgba(242, 169, 59, .4); }
+html[data-theme="dark"] .banner.info { color: #b4cbff; border-color: rgba(107, 151, 255, .35); }
+html[data-theme="dark"] .banner.good { color: #8fe3bd; border-color: rgba(62, 207, 142, .38); }
+
+html[data-theme="dark"] .hero .big { background: var(--surface-3); }
+html[data-theme="dark"] .hero.good { color: #8fe3bd; border-color: rgba(62, 207, 142, .38); }
+html[data-theme="dark"] .hero.bad { color: #ffb3bd; border-color: rgba(255, 107, 125, .4); }
+html[data-theme="dark"] .hero.wait { color: #ffd199; border-color: rgba(242, 169, 59, .4); }
+html[data-theme="dark"] .hero.idle { background: var(--surface); }
+
+html[data-theme="dark"] .device.alerting { border-color: rgba(255, 107, 125, .6); box-shadow: 0 0 0 3px rgba(255, 107, 125, .16); }
+html[data-theme="dark"] .device.focus { box-shadow: 0 0 0 3px rgba(107, 151, 255, .22); }
+html[data-theme="dark"] .alert-card.new { animation-name: alert-pop-dark; }
+@keyframes alert-pop-dark { 0% { background: rgba(255, 107, 125, .22); } 100% { background: var(--surface); } }
+html[data-theme="dark"] .input:focus { outline-color: rgba(107, 151, 255, .45); }
+html[data-theme="dark"] .code { color: #9fc0ff; }
+html[data-theme="dark"] .meter .fill.normal { background: #4aa392; }
+html[data-theme="dark"] .block.bad { background: rgba(255, 92, 138, .12); }
+html[data-theme="dark"] .chk i.f { background: rgba(255, 92, 138, .18); }
+html[data-theme="dark"] .choice.primary { background: linear-gradient(180deg, rgba(107, 151, 255, .1), var(--surface)); border-color: rgba(107, 151, 255, .45); }
+html[data-theme="dark"] .tip { background: #2a3b5e; }
+html[data-theme="dark"] .play-step.done { border-color: rgba(62, 207, 142, .38); }
+html[data-theme="dark"] .overlay { background: rgba(4, 8, 16, .72); }
+html[data-theme="dark"] .btn.primary { color: #07101f; }
+html[data-theme="dark"] .btn.primary:hover { background: #82a8ff; }
+html[data-theme="dark"] .btn:hover { border-color: #4b6190; }
+html[data-theme="dark"] .btn.danger { border-color: rgba(255, 107, 125, .45); }
+html[data-theme="dark"] .seg button.on { box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+html[data-theme="dark"] .toast { box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+html[data-theme="dark"] .advice { background: var(--surface-2); color: var(--text-2); }
+html[data-theme="dark"] .deduct .pts { background: rgba(255, 107, 125, .15); }
+html[data-theme="dark"] .flash.go { animation-name: flash-dark; }
+@keyframes flash-dark { 0% { box-shadow: inset 0 0 140px 24px rgba(255, 107, 125, .4); } 100% { box-shadow: inset 0 0 140px 24px rgba(255, 107, 125, 0); } }
+html[data-theme="dark"] .meterbig .pct { color: var(--text); }
+html[data-theme="dark"] .evidence, html[data-theme="dark"] .feed, html[data-theme="dark"] .hexdump { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+}

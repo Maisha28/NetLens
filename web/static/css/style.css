@@ -143,7 +143,7 @@ svg.ic { width: 18px; height: 18px; vertical-align: -3px; flex: none; }
 .guide .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: #fff; color: var(--accent); flex: none; }
 .guide .ico svg { width: 20px; height: 20px; }
 .guide h3 { margin: 0 0 2px; font-size: 17px; }
-.guide p { margin: 0; color: #33425f; font-size: 16px; }
+.guide p { margin: 0; color: var(--text-2); font-size: 16px; }
 .guide .why { margin-top: 6px; color: var(--muted); font-size: 15px; }
 .guide .why b { color: var(--accent); }
 body.no-guide .guide { display: none; }
@@ -269,7 +269,7 @@ table.t td.r, table.t th.r { text-align: right; }
 .dev-name { font-weight: 700; font-size: 20px; display: flex; align-items: center; gap: 10px; }
 .dev-name button { background: transparent; border: 0; color: var(--faint); cursor: pointer; padding: 0 2px; }
 .dev-name button:hover { color: var(--accent); }
-.dev-sentence { font-size: 17px; color: #33425f; }
+.dev-sentence { font-size: 17px; color: var(--text-2); }
 .meter { display: grid; gap: 14px; }
 .meter .line { display: grid; grid-template-columns: 96px 1fr 110px; gap: 14px; align-items: center; font-size: 16px; }
 .meter .track { height: 16px; background: var(--surface-3); border-radius: 99px; position: relative; }
@@ -351,7 +351,7 @@ canvas { display: block; width: 100%; }
 .trace { display: grid; gap: 14px; align-content: start; }
 .trace .step { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .trace .step .k { color: var(--accent); font-weight: 700; font-size: 14px; }
-.trace .step .v { font-family: var(--mono); font-size: 14px; color: #33425f; word-break: break-all; }
+.trace .step .v { font-family: var(--mono); font-size: 14px; color: var(--text-2); word-break: break-all; }
 
 /* ------------------------------------------------------------ ledger */
 .chain { display: flex; gap: 0; overflow-x: auto; padding: 14px 4px 20px; align-items: stretch; }
@@ -368,7 +368,7 @@ canvas { display: block; width: 100%; }
 .chk i.p { background: var(--ok-soft); color: var(--ok); }
 .chk i.f { background: #fbe3ea; color: var(--critical); }
 .steps3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.steps3 > div { display: grid; grid-template-columns: 40px 1fr; gap: 14px; font-size: 16px; color: #33425f; }
+.steps3 > div { display: grid; grid-template-columns: 40px 1fr; gap: 14px; font-size: 16px; color: var(--text-2); }
 .steps3 .n { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; display: grid; place-items: center; }
 @media (max-width: 1000px) { .steps3 { grid-template-columns: 1fr; } }
 .meterbig { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
@@ -398,7 +398,7 @@ canvas { display: block; width: 100%; }
 .check .st.wait { background: var(--warn-soft); color: var(--warn); }
 .check small { display: block; color: var(--muted); font-size: 14.5px; }
 .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: s; }
-.steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 12px; color: #33425f; font-size: 15.5px; align-items: center; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 12px; color: var(--text-2); font-size: 15.5px; align-items: center; }
 .steps li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; display: grid; place-items: center; font-size: 14px; }
 .iface-list { display: grid; gap: 8px; max-height: 210px; overflow: auto; }
 .iface { display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: center; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; background: var(--surface); }
@@ -417,7 +417,7 @@ canvas { display: block; width: 100%; }
 .play-step .num { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); font-weight: 800; color: var(--accent); font-size: 18px; }
 .play-step.done .num { background: var(--ok-soft); color: var(--ok); }
 .play-step h4 { margin: 0 0 8px; font-size: 20px; }
-.play-step .do, .play-step .see, .play-step .say { font-size: 16px; color: #33425f; margin-top: 6px; }
+.play-step .do, .play-step .see, .play-step .say { font-size: 16px; color: var(--text-2); margin-top: 6px; }
 .play-step .lbl { display: inline-block; min-width: 86px; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--faint); }
 .play-step .say { color: var(--muted); font-style: italic; }
 .scn { display: grid; grid-template-columns: 1fr auto; gap: 14px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); align-items: center; }

@@ -1,0 +1,56 @@
+/* Dashboard motion: page entrances, hover lift, status pulses, theme cross-fade.
+   Only top-level page blocks animate on entry - blocks re-rendered every second must never
+   re-trigger an animation (that would flicker). Everything respects prefers-reduced-motion. */
+
+@keyframes pageIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.view > * { animation: pageIn .6s cubic-bezier(.2, .8, .2, 1) both; }
+.view > *:nth-child(2) { animation-delay: .05s; }
+.view > *:nth-child(3) { animation-delay: .1s; }
+.view > *:nth-child(4) { animation-delay: .15s; }
+.view > *:nth-child(5) { animation-delay: .2s; }
+.view > *:nth-child(6) { animation-delay: .25s; }
+.view > *:nth-child(n+7) { animation-delay: .3s; }
+
+/* hover lift */
+.tile, .rule-card, .choice, .stage, .play-step { transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s, border-color .25s; }
+.tile:hover, .rule-card:hover, .stage:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -16px rgba(36, 86, 216, .35); }
+.tile .num { transition: color .3s; }
+.btn { transition: background .15s, border-color .15s, transform .12s, box-shadow .25s; }
+.btn.primary:hover { box-shadow: 0 10px 26px -10px var(--accent); transform: translateY(-1px); }
+.nav a svg { transition: transform .25s; }
+.nav a:hover svg { transform: scale(1.14) rotate(-4deg); }
+.theme-toggle svg { transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+.theme-toggle:hover svg { transform: rotate(35deg) scale(1.1); }
+
+/* the status hero breathes so a change of state draws the eye */
+@keyframes ring-good { 0% { box-shadow: 0 0 0 0 rgba(19, 138, 85, .45); } 70% { box-shadow: 0 0 0 16px rgba(19, 138, 85, 0); } 100% { box-shadow: 0 0 0 0 rgba(19, 138, 85, 0); } }
+@keyframes ring-bad { 0% { box-shadow: 0 0 0 0 rgba(208, 58, 58, .55); } 70% { box-shadow: 0 0 0 18px rgba(208, 58, 58, 0); } 100% { box-shadow: 0 0 0 0 rgba(208, 58, 58, 0); } }
+@keyframes ring-wait { 0% { box-shadow: 0 0 0 0 rgba(180, 95, 6, .4); } 70% { box-shadow: 0 0 0 14px rgba(180, 95, 6, 0); } 100% { box-shadow: 0 0 0 0 rgba(180, 95, 6, 0); } }
+.hero.good .big { animation: ring-good 2.6s infinite; }
+.hero.bad .big { animation: ring-bad 1.6s infinite; }
+.hero.wait .big { animation: ring-wait 2.2s infinite; }
+.hero .big svg { animation: float 4s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+/* live indicator + attention badges */
+@keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.badge.crit, .nav .count { animation: soft-pulse 1.8s ease-in-out infinite; }
+.pulse-dot { animation: blink 1.2s infinite; }
+
+/* smooth cross-fade only while the theme is being switched (added/removed by app.js) */
+html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color .4s ease, color .4s ease, border-color .4s ease, box-shadow .4s ease, fill .4s ease, stroke .4s ease !important;
+}
+
+/* skeleton shimmer for "waiting for data" placeholders */
+@keyframes shimmer { from { background-position: -240px 0; } to { background-position: 240px 0; } }
+.shimmer { background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%); background-size: 480px 100%; animation: shimmer 1.4s linear infinite; border-radius: 8px; color: transparent !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* theme toggle shows the icon of the theme you would switch TO */
+.theme-toggle .sun { display: none; }
+html[data-theme="dark"] .theme-toggle .moon { display: none; }
+html[data-theme="dark"] .theme-toggle .sun { display: inline-block; }

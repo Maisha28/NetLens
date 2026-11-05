@@ -12,8 +12,8 @@ const TuneChart = {
     ctx.font = `13.5px ${SANS()}`; ctx.lineWidth = 1;
     for (let g = 0; g <= 4; g++) {
       const v = (maxV * g) / 4, yy = y(v);
-      ctx.strokeStyle = GRIDC; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
-      ctx.fillStyle = SUB; ctx.textAlign = "right"; ctx.fillText(String(Math.round(v)), padL - 10, yy + 5);
+      ctx.strokeStyle = P().grid; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+      ctx.fillStyle = P().sub; ctx.textAlign = "right"; ctx.fillText(String(Math.round(v)), padL - 10, yy + 5);
     }
     const gw = cw / steps.length, bw = Math.min(34, gw / 3);
     steps.forEach((s, i) => {
@@ -25,9 +25,9 @@ const TuneChart = {
         ctx.fillStyle = color; ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(cx + dx, top, bw, Math.max(2, padT + ch - top), 5); else ctx.rect(cx + dx, top, bw, padT + ch - top);
         ctx.fill();
-        ctx.fillStyle = INK; ctx.font = `bold 14px ${SANS()}`; ctx.textAlign = "center"; ctx.fillText(String(v), cx + dx + bw / 2, top - 7);
+        ctx.fillStyle = P().ink; ctx.font = `bold 14px ${SANS()}`; ctx.textAlign = "center"; ctx.fillText(String(v), cx + dx + bw / 2, top - 7);
       });
-      ctx.fillStyle = last ? "#138a55" : SUB; ctx.font = `${last ? "bold " : ""}15px ${SANS()}`; ctx.textAlign = "center";
+      ctx.fillStyle = last ? "#138a55" : P().sub; ctx.font = `${last ? "bold " : ""}15px ${SANS()}`; ctx.textAlign = "center";
       ctx.fillText(i === 0 ? "Untuned" : last ? "Shipped" : `Step ${i}`, cx, h - 14);
     });
   },
@@ -43,8 +43,8 @@ const TuneChart = {
     ctx.font = `13.5px ${SANS()}`; ctx.lineWidth = 1;
     for (let g = 0; g <= 4; g++) {
       const v = (maxV * g) / 4, yy = y(v);
-      ctx.strokeStyle = GRIDC; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
-      ctx.fillStyle = SUB; ctx.textAlign = "right"; ctx.fillText(String(Math.round(v)), padL - 10, yy + 5);
+      ctx.strokeStyle = P().grid; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+      ctx.fillStyle = P().sub; ctx.textAlign = "right"; ctx.fillText(String(Math.round(v)), padL - 10, yy + 5);
     }
     const di = points.findIndex((p) => Number(p.value) === Number(defaultValue));
     if (di >= 0) {
@@ -57,11 +57,11 @@ const TuneChart = {
       points.forEach((p, i) => (i ? ctx.lineTo(x(i), y(p[key])) : ctx.moveTo(x(i), y(p[key]))));
       ctx.stroke();
       points.forEach((p, i) => {
-        ctx.fillStyle = "#fff"; ctx.strokeStyle = color; ctx.lineWidth = 3;
+        ctx.fillStyle = P().surface; ctx.strokeStyle = color; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(x(i), y(p[key]), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       });
     });
-    ctx.fillStyle = SUB; ctx.font = `14.5px ${SANS()}`; ctx.textAlign = "center";
+    ctx.fillStyle = P().sub; ctx.font = `14.5px ${SANS()}`; ctx.textAlign = "center";
     points.forEach((p, i) => ctx.fillText(fmtX(p.value), x(i), h - 14));
   },
 };

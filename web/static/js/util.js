@@ -217,3 +217,48 @@ function barRows(items, { color, fmtVal = fmt.bytes, max } = {}) {
   const top = max || Math.max(1, ...items.map((i) => i.value));
   return items.map((i) => `<div class="bar-row"><div class="name" title="${esc(i.label)}">${esc(i.label)}</div><div class="bar"><i style="width:${Math.max(2, (i.value / top) * 100)}%;${i.color || color ? `background:${i.color || color}` : ""}"></i></div><div class="val">${esc(fmtVal(i.value, i))}</div></div>`).join("");
 }
+
+
+/* ---------------------------------------------------------------------- theme */
+const PALETTES = {
+  light: {
+    ink: "#172033", sub: "#55627a", grid: "#e6ebf3", surface: "#ffffff", track: "#e9eef6", accent: "#2456d8",
+    barIdle: "#c5cedd", barReady: "#7da2f0", okSoft: "#e4f5ec", dotIdle: "#9bb4ec", cap: "#98a3b8", faint: "#7a869c",
+    lan: "#b7c9f2", wan: "#c9d3e6", orgHover: "#e8eefc", orgLine: "#cdd6e3",
+  },
+  dark: {
+    ink: "#e8eefb", sub: "#9db0d2", grid: "rgba(255,255,255,.08)", surface: "#121b2f", track: "#1f2c4a", accent: "#6b97ff",
+    barIdle: "#34486f", barReady: "#5b8cff", okSoft: "rgba(62,207,142,.14)", dotIdle: "#5b7bc0", cap: "#6f84ab", faint: "#6f84ab",
+    lan: "rgba(107,151,255,.5)", wan: "rgba(125,145,195,.38)", orgHover: "#1f2c4a", orgLine: "#34486f",
+  },
+};
+
+const Theme = {
+  get() { return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; },
+  set(t) {
+    const root = document.documentElement;
+    root.classList.add("theme-anim");           // cross-fade only while switching
+    root.dataset.theme = t;
+    store.set("theme", t);
+    setTimeout(() => root.classList.remove("theme-anim"), 500);
+  },
+  toggle() { this.set(this.get() === "dark" ? "light" : "dark"); },
+};
+/** Chart colours for the current theme (read on every draw, so charts follow a switch immediately). */
+function P() { return PALETTES[Theme.get()]; }
+
+/** Animate an element's number to a new value; non-numeric values are set directly. */
+function tweenNumber(el, value, ms = 700) {
+  if (typeof value !== "number") { el.textContent = value; el._v = undefined; return; }
+  const from = el._v == null ? 0 : el._v;
+  el._v = value;
+  if (from === value) { el.textContent = fmt.num(value); return; }
+  const t0 = performance.now(); el._tw = t0;
+  const tick = (now) => {
+    if (el._tw !== t0) return;                  // superseded by a newer target
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt.num(Math.round(from + (value - from) * e));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}

@@ -26,6 +26,7 @@ const App = {
       const on = document.body.classList.toggle("no-guide") === false;
       $("#guideSwitch").classList.toggle("on", on); store.set("guide", on);
     };
+    $("#themeBtn").onclick = () => { Theme.toggle(); this.render(); };
     $("#btnPause").onclick = async () => {
       if (!S) return;
       try { await api("/api/control", { action: S.paused ? "resume" : "pause" }); this.poll(); } catch (e) { toast("Control", e.message, "med"); }
