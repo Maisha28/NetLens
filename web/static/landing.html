@@ -13,6 +13,7 @@
   })();
 </script>
 <link rel="stylesheet" href="css/landing.css">
+<!--USE--><link rel="stylesheet" href="css/landing-use.css"><!--/USE-->
 <!--STORY--><link rel="stylesheet" href="css/landing-story.css"><!--/STORY-->
 </head>
 <body>
@@ -29,7 +30,7 @@
     <b>NetLens</b>
   </a>
   <nav class="links">
-    <a href="#features">Features</a><!--STORY--><a href="#story">How it works</a><a href="#proof">Proof</a><!--/STORY--><a href="#compare">Why not Wireshark?</a>
+    <a href="#features">Features</a><!--USE--><a href="#use">How to use</a><!--/USE--><!--STORY--><a href="#story">How it works</a><a href="#proof">Proof</a><!--/STORY--><a href="#compare">Why not Wireshark?</a>
   </nav>
   <div class="actions">
     <button class="icon-btn" id="themeBtn" aria-label="Switch between dark and light theme" title="Switch theme">
@@ -98,7 +99,24 @@
     </div>
   </section>
 
-  
+  <!--USE-->
+  <!-- ============================================ HOW TO USE (WALKTHROUGH) -->
+  <section id="use" class="section use">
+    <div class="wrap">
+      <div class="eyebrow reveal">How to use it</div>
+      <h2 class="reveal d1">From hotspot to insight<br>in five steps.</h2>
+      <p class="sub reveal d2">A guided walkthrough of the exact sequence you follow. It plays by itself - hover to pause, or click any step to jump to it.</p>
+      <div class="use-grid">
+        <div class="reveal">
+          <div class="u-steps" id="useSteps"></div>
+          <div class="u-controls"><button id="useToggle" type="button">❚❚ Pause</button><span>Hover to pause · click a step to jump</span></div>
+        </div>
+        <div class="reveal d1"><div class="u-stage" id="useStage" aria-live="polite"></div></div>
+      </div>
+    </div>
+  </section>
+  <!--/USE-->
+
   <!--STORY-->
   <!-- =============================================== SCROLL STORY -->
   <section class="story" id="story">
@@ -195,6 +213,7 @@
 </footer>
 
 <script src="js/landing-hero.js"></script>
+<!--USE--><script src="js/landing-use.js"></script><!--/USE-->
 <!--STORY--><script src="js/landing-story.js"></script><!--/STORY-->
 </body>
 </html>
