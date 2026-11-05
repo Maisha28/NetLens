@@ -79,8 +79,12 @@ def main() -> int:
         print(f"Could not start: {exc}\nThe dashboard will open so you can pick another source.")
 
     server, port = serve(app, args.host, args.port)
+    if port != args.port:
+        print(f"\n!!  Port {args.port} is already in use - an OLD NetLens is probably still running there.\n"
+              f"!!  This new one is on port {port}. Use the address printed below (not {args.port}), or stop the old one:\n"
+              f"!!      Get-Process python | Stop-Process -Force      (in an Administrator PowerShell)\n")
     url = f"http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{port}"
-    print(f"NetLens dashboard running at {url}  (mode: {engine.mode})  - Ctrl+C to stop")
+    print(f"NetLens is running at {url}   (landing page)  -  app at {url}/dashboard   (mode: {engine.mode})  -  Ctrl+C to stop")
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

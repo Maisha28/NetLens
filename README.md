@@ -32,6 +32,19 @@ The browser opens the **landing page** (`/`): a scroll-driven tour that animates
 Shortcuts: `python app.py --live [--iface "Local Area Connection* 3"]`, `--sim`, `--pcap file.pcap`, `--list-interfaces`.
 Terminal-only mode (same engine): `python main.py --iface "<adapter>"`.
 
+### Running without `run_netlens.bat`
+Open **PowerShell as Administrator** (live capture needs it; Simulation and Replay do not), then:
+
+```
+cd C:\NetLens
+venv\Scripts\activate
+python app.py                      # landing page at http://localhost:8765, app at /dashboard
+python app.py --live               # start capturing the hotspot immediately
+python app.py --sim                # simulation, no hardware needed
+```
+
+The landing page is `/`; the app itself is `/dashboard`. If the old page keeps appearing, an earlier NetLens is still holding the port - stop it with `Get-Process python | Stop-Process -Force` (Administrator PowerShell) and start again. NetLens also prints a warning if it had to move to another port.
+
 ### Live demo setup (your phone)
 1. Windows **Settings → Network & internet → Mobile hotspot → On**; join it from your phone.
 2. Start NetLens as Administrator (`run_netlens.bat`), choose **Live capture**, pick the adapter that has `192.168.137.1`.
