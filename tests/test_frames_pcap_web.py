@@ -151,7 +151,7 @@ def test_landing_page_dashboard_and_static_assets_are_served(server):
     status, body = get(base + "/dashboard")
     assert status == 200 and b'id="pageTitle"' in body                                  # the application
     assert get(base + "/dashboard/")[0] == 200
-    for asset in ("css/style.css", "css/landing.css", "js/app.js", "js/charts.js", "js/landing-hero.js"):
+    for asset in ("css/style.css", "css/landing.css", "js/app.js", "js/charts.js", "js/landing-hero.js", "js/landing-story.js"):
         assert get(f"{base}/{asset}")[0] == 200
 
 

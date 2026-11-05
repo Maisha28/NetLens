@@ -21,7 +21,7 @@ run_netlens.bat            # double-click: asks for Administrator, starts the da
 python app.py              # opens http://localhost:8765
 ```
 
-The browser opens a **setup wizard** with three sources - nothing is captured or simulated until you choose:
+The browser opens the **landing page** (`/`): a scroll-driven tour that animates a packet from raw bytes to a verdict, with the measured results and an honest comparison with Wireshark. **Open dashboard** (`/dashboard`) starts the app, whose **setup wizard** offers three sources - nothing is captured or simulated until you choose:
 
 | Source | What it is |
 |---|---|
@@ -55,7 +55,7 @@ Terminal-only mode (same engine): `python main.py --iface "<adapter>"`.
 | Security score | An A-F grade per device with every deduction explained and what to do about it; prints as a one-page report for an IT admin |
 | Tuning lab | Replays one labelled recording under different detector settings and scores every alert right or wrong: before/after study, one-setting sweeps, held-out check |
 
-Toggle **Guide** in the header to hide/show the plain-language explanations.
+Toggle **Help text** in the header to hide/show the plain-language explanations, and use the moon/sun button for the **dark theme** (remembered, shared with the landing page; printed reports always stay light).
 
 ## Evidence it works: the Tuning Lab
 

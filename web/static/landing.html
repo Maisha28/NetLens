@@ -13,7 +13,7 @@
   })();
 </script>
 <link rel="stylesheet" href="css/landing.css">
-
+<!--STORY--><link rel="stylesheet" href="css/landing-story.css"><!--/STORY-->
 </head>
 <body>
 
@@ -29,7 +29,7 @@
     <b>NetLens</b>
   </a>
   <nav class="links">
-    <a href="#features">Features</a><a href="#compare">Why not Wireshark?</a>
+    <a href="#features">Features</a><!--STORY--><a href="#story">How it works</a><a href="#proof">Proof</a><!--/STORY--><a href="#compare">Why not Wireshark?</a>
   </nav>
   <div class="actions">
     <button class="icon-btn" id="themeBtn" aria-label="Switch between dark and light theme" title="Switch theme">
@@ -55,7 +55,7 @@
         <p class="lead reveal d2">NetLens watches the traffic of <b>your own devices</b>, learns what is normal for each one, and tells you in plain English when something is not - <b>without ever reading a single message</b>.</p>
         <div class="cta-row reveal d3">
           <a class="btn primary lg" href="/dashboard">Open the dashboard <span aria-hidden="true">→</span></a>
-          
+          <!--STORY--><a class="btn ghost lg" href="#story">See how it works <span aria-hidden="true">↓</span></a><!--/STORY-->
         </div>
         <ul class="trust reveal d4">
           <li>No cloud</li><li>No machine learning</li><li>Works offline</li><li>Tamper-proof evidence</li>
@@ -96,7 +96,60 @@
     </div>
   </section>
 
-  
+  <!--STORY-->
+  <!-- =============================================== SCROLL STORY -->
+  <section class="story" id="story">
+    <div class="stage">
+      <div class="story-copy">
+        <div class="eyebrow">How it works</div>
+        <div class="steps" id="storySteps">
+          <article class="step on" data-i="0"><span class="n">01</span><h2>It starts as raw bytes.</h2><p>Every packet your phone sends reaches this laptop as nothing but numbers. NetLens captures them untouched - and never reads a message.</p></article>
+          <article class="step" data-i="1"><span class="n">02</span><h2>Decoded by hand.</h2><p>Ethernet, IP, TCP, DNS and TLS are parsed with <code>struct.unpack</code> at their RFC byte offsets. No black box: every field traces back to its bytes.</p></article>
+          <article class="step" data-i="2"><span class="n">03</span><h2>Packets become conversations.</h2><p>Grouped by 5-tuple and named offline - <b>"YouTube · Google"</b>, not <code>142.250.77.14</code>. The map draws itself.</p></article>
+          <article class="step" data-i="3"><span class="n">04</span><h2>It learns what's normal.</h2><p>Each device builds its own baseline. When one jumps far outside it, you get an alert with the numbers - and attacks can't teach it they're normal.</p></article>
+          <article class="step" data-i="4"><span class="n">05</span><h2>The evidence can't be changed.</h2><p>Alerts are hash-chained and signed. Quietly edit one afterwards and the chain pinpoints exactly where - try it in the dashboard.</p></article>
+        </div>
+        <div class="dots" id="storyDots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="story-visual" aria-hidden="true">
+        <div class="scene s0 on"><div class="win"><div class="win-bar"><i></i><i></i><i></i><span>raw frame · 54 bytes</span></div><div class="hex" id="hex0"></div></div></div>
+        <div class="scene s1"><div class="win"><div class="win-bar"><i></i><i></i><i></i><span>decoded by hand</span></div><div class="hex" id="hex1"></div>
+          <div class="legend"><span class="eth">Ethernet</span><span class="ip">IPv4</span><span class="tcp">TCP</span></div>
+          <div class="fields" id="fields1"></div></div></div>
+        <div class="scene s2"><svg viewBox="0 0 520 380" class="flowsvg" id="flowsvg"></svg></div>
+        <div class="scene s3"><div class="win wide"><div class="win-bar"><i></i><i></i><i></i><span>phone · bytes per window</span></div><svg viewBox="0 0 520 280" class="barsvg" id="barsvg"></svg><div class="alertpop"><b>ALERT</b> Unusually heavy data use<small>8.2× its normal</small></div></div></div>
+        <div class="scene s4"><div class="chain" id="chain"></div><div class="verdict"><b>Tampering detected</b> at entry #3 - the stored alert no longer matches its seal.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== MEASURED RESULTS -->
+  <section class="proof section" id="proof">
+    <div class="wrap">
+      <div class="eyebrow reveal">Measured, not claimed</div>
+      <h2 class="reveal d1">Tuned with evidence.</h2>
+      <p class="sub reveal d2">A labelled benchmark where every attack and every harmless-but-unusual event has a known answer. The same recording is replayed under different settings and every alert is marked right or wrong.</p>
+
+      <div class="counters">
+        <div class="counter reveal"><b data-count="0">0</b><span>bytes of message content ever read</span></div>
+        <div class="counter reveal d1"><b data-count="3">0</b><span>explicit detection rules - no machine learning</span></div>
+        <div class="counter reveal d2"><b data-count="123">0</b><span>automated tests</span></div>
+        <div class="counter reveal d3"><b data-count="34" data-of="35">0</b><span>attacks caught on traffic never used for tuning</span></div>
+      </div>
+
+      <div class="beforeafter reveal">
+        <div class="ba-title"><b>False alarms</b><span>untuned first attempt → shipped settings</span></div>
+        <div class="ba-row"><label>Untuned</label><div class="ba-bar"><i class="bad" style="--w:100%"></i></div><em data-count="52">0</em></div>
+        <div class="ba-row"><label>Tuned</label><div class="ba-bar"><i class="ok" style="--w:2%"></i></div><em data-count="0">0</em></div>
+        <div class="ba-title" style="margin-top:22px"><b>Alerts raised</b><span>for the same 7 real attacks - all caught either way</span></div>
+        <div class="ba-row"><label>Untuned</label><div class="ba-bar"><i class="bad" style="--w:100%"></i></div><em data-count="75">0</em></div>
+        <div class="ba-row"><label>Tuned</label><div class="ba-bar"><i class="ok" style="--w:11%"></i></div><em data-count="8">0</em></div>
+        <p class="fine">Synthetic benchmark, stated plainly: it measures trade-offs reproducibly rather than claiming accuracy on every real network. On five unseen variations the tuned detector caught 34 of 35 attacks with 1 false alarm in total (untuned: 269).</p>
+      </div>
+    </div>
+  </section>
+  <!--/STORY-->
 
   <!-- ====================================================== COMPARE -->
   <section id="compare" class="section">
@@ -139,6 +192,6 @@
 </footer>
 
 <script src="js/landing-hero.js"></script>
-
+<!--STORY--><script src="js/landing-story.js"></script><!--/STORY-->
 </body>
 </html>
