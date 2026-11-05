@@ -119,8 +119,13 @@ _ALERT_COLUMNS = [
 ]
 
 
-def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+def get_connection(db_path: Path = DEFAULT_DB_PATH, shared: bool = False) -> sqlite3.Connection:
+    """
+    shared=True lets the connection be used from several threads (the web
+    engine writes from its worker while HTTP handlers read); callers then
+    serialise access with their own lock.
+    """
+    conn = sqlite3.connect(db_path, check_same_thread=not shared)
     conn.execute(SCHEMA)
     conn.execute(FLOWS_SCHEMA)
     conn.execute(BASELINES_SCHEMA)
@@ -129,7 +134,7 @@ def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     return conn
 
 
-def store_packet(record: PacketRecord, conn: sqlite3.Connection) -> None:
+def store_packet(record: PacketRecord, conn: sqlite3.Connection, commit: bool = True) -> None:
     placeholders = ", ".join("?" for _ in _COLUMNS)
     column_list = ", ".join(_COLUMNS)
 
@@ -147,7 +152,8 @@ def store_packet(record: PacketRecord, conn: sqlite3.Connection) -> None:
     conn.execute(
         f"INSERT INTO packets ({column_list}) VALUES ({placeholders})", values
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def get_all_packets(conn: sqlite3.Connection) -> List[PacketRecord]:

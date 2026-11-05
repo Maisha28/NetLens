@@ -38,6 +38,26 @@ class FlowStats:
             self.last_seen = max(self.last_seen, record.timestamp)
 
 
+def bump_flow(flows: Dict[FlowKey, FlowStats], record: PacketRecord) -> FlowStats:
+    """
+    Incremental version of group_into_flows() for a live engine: update one
+    flow's counters without retaining the PacketRecord, so memory stays flat
+    however long the capture runs.
+    """
+    key = _flow_key(record)
+    stats = flows.get(key)
+    if stats is None:
+        stats = flows[key] = FlowStats(key=key)
+    stats.packet_count += 1
+    stats.byte_count += record.length
+    if stats.packet_count == 1:
+        stats.first_seen = stats.last_seen = record.timestamp
+    else:
+        stats.first_seen = min(stats.first_seen, record.timestamp)
+        stats.last_seen = max(stats.last_seen, record.timestamp)
+    return stats
+
+
 def _flow_key(record: PacketRecord) -> FlowKey:
     return (
         record.src_ip or "",
