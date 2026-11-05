@@ -1,0 +1,120 @@
+/* NetLens visual identity - "viewfinder / instrument panel".
+   A lens-and-reticle vocabulary used everywhere: crop-mark corners on cards, a sweeping scan beam,
+   mono-spaced technical labels, a DIN-style display face for numbers and titles, and a registration-mark
+   grid behind the page. Purely additive (loaded last); no web fonts, works offline. */
+
+:root {
+  --display: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --reticle: var(--accent-2);
+}
+
+/* ---------- typography: DIN-like display face for titles and numbers, mono for labels ---------- */
+.topbar h1, .card-head h2, .card > h2, .hero h2, .wizard h2, .brand b, .tile .num,
+.landing h1, .hero h1, .section h2, .story-copy h2, .final h2, .stage h3, .card h3 {
+  font-family: var(--display); font-weight: 600; letter-spacing: -.2px;
+}
+.tile .num { font-weight: 600; font-stretch: 100%; letter-spacing: -1.4px; }
+.nav-group, .eyebrow, .tile .sub, table.t th, .card-head .hint {
+  font-family: var(--mono);
+}
+.nav-group { letter-spacing: 1.6px; font-size: 11.5px; display: flex; align-items: center; gap: 10px; }
+.nav-group::after { content: ""; flex: 1; height: 1px; background: repeating-linear-gradient(90deg, var(--border-2) 0 1px, transparent 1px 6px); }
+
+/* ---------- backdrop: registration-mark grid ---------- */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background:
+    radial-gradient(circle, var(--border-2) 1px, transparent 1.3px) 0 0 / 26px 26px,
+    linear-gradient(var(--border) 1px, transparent 1px) 0 0 / 130px 130px,
+    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 130px 130px;
+  -webkit-mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, transparent 70%);
+}
+
+/* ---------- crop-mark corners: the signature ---------- */
+.main .card, .main .tile, .main .choice, .main .rule-card, .main .hero, .section .card {
+  --b: 15px; --t: 2px;
+  position: relative; border-radius: 10px;
+}
+.main .card::after, .main .tile::after, .main .choice::after, .main .rule-card::after, .section .card::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 10px; pointer-events: none;
+  opacity: .75; transition: opacity .25s, inset .25s;
+  background:
+    linear-gradient(var(--reticle), var(--reticle)) top left / var(--b) var(--t) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) top left / var(--t) var(--b) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) top right / var(--b) var(--t) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) top right / var(--t) var(--b) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) bottom left / var(--b) var(--t) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) bottom left / var(--t) var(--b) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) bottom right / var(--b) var(--t) no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) bottom right / var(--t) var(--b) no-repeat;
+}
+.main .card:hover::after, .main .tile:hover::after, .main .choice:hover::after, .main .rule-card:hover::after, .section .card:hover::after { opacity: 1; inset: -4px; }
+
+/* ---------- tiles read like gauges ---------- */
+.tile { border-left: 3px solid var(--reticle); }
+.tile .lbl { font-family: var(--display); letter-spacing: .3px; text-transform: uppercase; font-size: 14px; color: var(--muted); font-weight: 600; }
+
+/* ---------- sidebar: logo aperture sweeps, active item has a scan bar ---------- */
+.brand { position: relative; }
+.brand svg { overflow: visible; }
+.brand::before {
+  content: ""; position: absolute; left: 10px; top: 2px; width: 42px; height: 42px; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 78%, color-mix(in srgb, var(--reticle) 70%, transparent) 100%);
+  -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%); mask: radial-gradient(circle, transparent 54%, #000 56%);
+  animation: sweep 3.6s linear infinite; pointer-events: none;
+}
+@keyframes sweep { to { transform: rotate(360deg); } }
+.brand b { font-size: 24px; letter-spacing: 1.2px; text-transform: uppercase; }
+.brand small { font-family: var(--mono); letter-spacing: .4px; }
+.nav a { border-radius: 8px; font-family: var(--display); letter-spacing: .25px; font-size: 17px; }
+.nav a.active { background: linear-gradient(90deg, var(--accent-soft), transparent); box-shadow: inset 3px 0 0 var(--reticle); }
+.nav a.active::after { content: "▸"; margin-left: auto; color: var(--reticle); font-size: 13px; }
+.nav a.active .count + *, .nav a .count:not(.zero) { margin-left: auto; }
+
+/* ---------- topbar: a slow scan beam under the header ---------- */
+.topbar { position: relative; }
+.topbar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--reticle) 45%, var(--accent) 55%, transparent) 0 0 / 28% 100% no-repeat;
+  animation: beam 5.5s ease-in-out infinite alternate;
+}
+@keyframes beam { from { background-position: 0 0; } to { background-position: 100% 0; } }
+.topbar h1::before { content: "◉"; color: var(--reticle); font-size: .58em; margin-right: 12px; vertical-align: .22em; }
+
+/* ---------- buttons and badges: squarer, more instrument-like ---------- */
+.btn { border-radius: 8px; font-family: var(--display); letter-spacing: .3px; font-weight: 600; }
+.badge { border-radius: 6px; font-family: var(--mono); font-size: 12.5px; letter-spacing: .3px; text-transform: uppercase; }
+.banner { border-radius: 10px; border-left-width: 4px; }
+
+/* ---------- landing page ---------- */
+.hero h1 { letter-spacing: -1.5px; }
+.hero h1 .grad .w { background: linear-gradient(100deg, #5ff5cf, #c8ff6b 60%, #ffd36b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.eyebrow { letter-spacing: 3px; display: inline-flex; align-items: center; gap: 12px; }
+.eyebrow::before { content: ""; width: 28px; height: 2px; background: var(--reticle); }
+.section h2 { font-size: clamp(34px, 4.4vw, 54px); }
+.marquee span { text-transform: uppercase; letter-spacing: 1.8px; font-size: 13px; }
+.crow, .win, .hex { border-radius: 10px; }
+.scroll-cue { border-color: var(--reticle); }
+
+/* a centre-hair reticle over the hero network, like a camera focus point */
+.hero { position: relative; }
+.hero::before {
+  content: ""; position: absolute; right: 12%; top: 22%; width: 120px; height: 120px; pointer-events: none; opacity: .5;
+  background:
+    linear-gradient(var(--reticle), var(--reticle)) center / 1px 100% no-repeat,
+    linear-gradient(var(--reticle), var(--reticle)) center / 100% 1px no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 18px, #000 19px, #000 60px, transparent 61px);
+  mask: radial-gradient(circle, transparent 18px, #000 19px, #000 60px, transparent 61px);
+  animation: sweep 24s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand::before, .topbar::after, .hero::before { animation: none; }
+}
+@media print {
+  body::before, .brand::before, .topbar::after, .card::after, .tile::after { display: none !important; }
+}
+
+/* the focus reticle belongs to the landing hero only, not the dashboard banner */
+.main .hero::before { display: none; }
